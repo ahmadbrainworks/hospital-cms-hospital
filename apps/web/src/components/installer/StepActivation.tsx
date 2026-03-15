@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 export interface ActivationData {
-  controlPanelUrl: string;
   registrationToken: string;
 }
 
@@ -14,9 +13,6 @@ interface Props {
 }
 
 export function StepActivation({ data, onNext, onBack }: Props) {
-  const [controlPanelUrl, setControlPanelUrl] = useState(
-    data.controlPanelUrl ?? "http://localhost:4001",
-  );
   const [registrationToken, setRegistrationToken] = useState(
     data.registrationToken ?? "",
   );
@@ -30,14 +26,14 @@ export function StepActivation({ data, onNext, onBack }: Props) {
       const res = await fetch("/install/api/validate-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ controlPanelUrl, registrationToken }),
+        body: JSON.stringify({ registrationToken }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
         setError(json.error?.message ?? "Token validation failed");
         return;
       }
-      onNext({ controlPanelUrl, registrationToken });
+      onNext({ registrationToken });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
     } finally {
@@ -45,8 +41,7 @@ export function StepActivation({ data, onNext, onBack }: Props) {
     }
   }
 
-  const isValid =
-    controlPanelUrl.startsWith("http") && registrationToken.length >= 8;
+  const isValid = registrationToken.length >= 8;
 
   return (
     <div>
@@ -59,22 +54,6 @@ export function StepActivation({ data, onNext, onBack }: Props) {
       </p>
 
       <div className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Control Panel URL
-          </label>
-          <input
-            type="url"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="https://control.hospitalcms.com"
-            value={controlPanelUrl}
-            onChange={(e) => setControlPanelUrl(e.target.value)}
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            URL of the vendor control panel server.
-          </p>
-        </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Registration Token

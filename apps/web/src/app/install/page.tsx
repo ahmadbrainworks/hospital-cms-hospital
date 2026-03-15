@@ -24,7 +24,6 @@ export interface InstallerFormData {
   mongoUri: string;
   redisUrl: string;
   // Vendor activation
-  controlPanelUrl: string;
   registrationToken: string;
   // Hospital profile
   hospitalName: string;
@@ -74,16 +73,11 @@ const STEP_LABELS: Record<InstallerStep, string> = {
   success: "Complete",
 };
 
-const DEFAULT_CONTROL_PANEL_URL = process.env["NEXT_PUBLIC_CONTROL_PANEL_URL"] === undefined
-  ? "http://localhost:4001"
-  : process.env["NEXT_PUBLIC_CONTROL_PANEL_URL"];
-
 export default function InstallerPage() {
   const [step, setStep] = useState<InstallerStep>("connectivity");
   const [formData, setFormData] = useState<Partial<InstallerFormData>>({
     mongoUri: "mongodb://localhost:27017/hospital_cms",
     redisUrl: "redis://localhost:6379",
-    controlPanelUrl: DEFAULT_CONTROL_PANEL_URL,
     settings: {
       timezone: "UTC",
       currency: "USD",
@@ -167,7 +161,7 @@ export default function InstallerPage() {
           )}
           {step === "activation" && (
             <StepActivation
-              data={{ controlPanelUrl: formData.controlPanelUrl ?? "", registrationToken: formData.registrationToken ?? "" }}
+              data={{ registrationToken: formData.registrationToken ?? "" }}
               onNext={(data) => {
                 updateData(data);
                 goNext();
