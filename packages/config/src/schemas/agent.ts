@@ -6,6 +6,7 @@ import {
   DEFAULT_STATE_FILE,
   DEFAULT_PACKAGES_DIR,
   VENDOR_CP_API_URL,
+  EMBEDDED_VENDOR_PUBLIC_KEY,
 } from "../paths";
 
 const schema = z.object({
@@ -107,13 +108,8 @@ export function getAgentConfig(): AgentConfig {
 
     const resolvedVendorKey =
       result.data.VENDOR_PUBLIC_KEY
-      ?? lockFile?.vendorPublicKey;
-    if (!resolvedVendorKey) {
-      throw new Error(
-        "Agent config validation failed:\n" +
-        "  VENDOR_PUBLIC_KEY: set VENDOR_PUBLIC_KEY or ensure the installer received the vendor key during registration",
-      );
-    }
+      ?? lockFile?.vendorPublicKey
+      ?? EMBEDDED_VENDOR_PUBLIC_KEY;
 
     process.env["INSTANCE_ID"] ??= resolvedInstanceId;
     process.env["AGENT_PRIVATE_KEY"] ??= resolvedPrivateKey;

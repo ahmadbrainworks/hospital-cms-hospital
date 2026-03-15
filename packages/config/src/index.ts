@@ -9,6 +9,7 @@ import {
   DEFAULT_PLUGINS_DIR,
   DEFAULT_THEMES_DIR,
   VENDOR_CP_API_URL,
+  EMBEDDED_VENDOR_PUBLIC_KEY,
 } from "./paths";
 
 function loadEnvironmentFiles(): void {
@@ -114,7 +115,7 @@ const envSchema = z.object({
     .url("CONTROL_PANEL_URL must be a valid URL")
     .default(VENDOR_CP_API_URL),
   CONTROL_PANEL_API_KEY: z.string().optional(),
-  VENDOR_PUBLIC_KEY: z.string().default(""),
+  VENDOR_PUBLIC_KEY: z.string().default(EMBEDDED_VENDOR_PUBLIC_KEY),
 
   // Encryption
   ENCRYPTION_KEY: z
@@ -208,4 +209,4 @@ export type { ControlPanelConfig } from "./schemas/control-panel";
 export { getAgentConfig as getAgentConfigFromPackage, resetAgentConfig } from "./schemas/agent";
 export type { AgentConfig as AgentConfigFromPackage } from "./schemas/agent";
 
-export { DATA_DIR, DEFAULT_LOCK_FILE, VENDOR_CP_API_URL } from "./paths";
+export { DATA_DIR, DEFAULT_LOCK_FILE, VENDOR_CP_API_URL, EMBEDDED_VENDOR_PUBLIC_KEY } from "./paths";
