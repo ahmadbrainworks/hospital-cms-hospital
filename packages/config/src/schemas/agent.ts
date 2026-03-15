@@ -16,8 +16,11 @@ const schema = z.object({
   /** RSA-4096 instance private key (PEM) — signs heartbeat payloads */
   AGENT_PRIVATE_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(100).optional()),
   /** RSA-4096 vendor public key (PEM) — verifies signed commands/licenses.
-   *  Resolved from env, or falls back to the installer lock file (vendorPublicKey). */
-  VENDOR_PUBLIC_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(100).optional()),
+   *  Falls back to the embedded vendor key if not set or invalid. */
+  VENDOR_PUBLIC_KEY: z.preprocess(
+    (v) => (!v || (typeof v === "string" && v.length < 100) ? undefined : v),
+    z.string().min(100).default(EMBEDDED_VENDOR_PUBLIC_KEY),
+  ),
   HEARTBEAT_INTERVAL_MS: z.coerce.number().int().min(10000).default(30000),
   AGENT_VERSION: z.string().default("1.0.0"),
   STATE_FILE_PATH: z
@@ -40,10 +43,9 @@ const schema = z.object({
 });
 
 type AgentConfigInput = z.infer<typeof schema>;
-export type AgentConfig = Omit<AgentConfigInput, "INSTANCE_ID" | "AGENT_PRIVATE_KEY" | "VENDOR_PUBLIC_KEY"> & {
+export type AgentConfig = Omit<AgentConfigInput, "INSTANCE_ID" | "AGENT_PRIVATE_KEY"> & {
   INSTANCE_ID: string;
   AGENT_PRIVATE_KEY: string;
-  VENDOR_PUBLIC_KEY: string;
 };
 
 let _config: AgentConfig | null = null;
@@ -106,20 +108,13 @@ export function getAgentConfig(): AgentConfig {
       );
     }
 
-    const resolvedVendorKey =
-      result.data.VENDOR_PUBLIC_KEY
-      ?? lockFile?.vendorPublicKey
-      ?? EMBEDDED_VENDOR_PUBLIC_KEY;
-
     process.env["INSTANCE_ID"] ??= resolvedInstanceId;
     process.env["AGENT_PRIVATE_KEY"] ??= resolvedPrivateKey;
-    process.env["VENDOR_PUBLIC_KEY"] ??= resolvedVendorKey;
 
     _config = {
       ...result.data,
       INSTANCE_ID: resolvedInstanceId,
       AGENT_PRIVATE_KEY: resolvedPrivateKey,
-      VENDOR_PUBLIC_KEY: resolvedVendorKey,
     };
   }
   return _config!;
