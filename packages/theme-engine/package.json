@@ -1,0 +1,35 @@
+{
+  "name": "@hospital-cms/theme-engine",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "mongodb": "^6.3.0",
+    "zod": "^3.22.4",
+    "@hospital-cms/contracts": "workspace:*",
+    "@hospital-cms/shared-types": "workspace:*",
+    "@hospital-cms/database": "workspace:*",
+    "@hospital-cms/errors": "workspace:*",
+    "@hospital-cms/logger": "workspace:*",
+    "@hospital-cms/crypto": "workspace:*"
+  },
+  "devDependencies": {
+    "@hospital-cms/crypto-vendor": "workspace:*",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  }
+}

@@ -1,0 +1,50 @@
+# ── Stage 1: Build ─────────────────────────────────────────────
+FROM node:22-alpine AS builder
+
+RUN corepack enable && corepack prepare pnpm@10.32.0 --activate
+
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
+
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY apps/agent/package.json apps/agent/
+COPY packages/audit/package.json packages/audit/
+COPY packages/auth/package.json packages/auth/
+COPY packages/config/package.json packages/config/
+COPY packages/contracts/package.json packages/contracts/
+COPY packages/crypto/package.json packages/crypto/
+COPY packages/crypto-vendor/package.json packages/crypto-vendor/
+COPY packages/database/package.json packages/database/
+COPY packages/errors/package.json packages/errors/
+COPY packages/logger/package.json packages/logger/
+COPY packages/plugin-runtime/package.json packages/plugin-runtime/
+COPY packages/rbac/package.json packages/rbac/
+COPY packages/shared-types/package.json packages/shared-types/
+COPY packages/theme-engine/package.json packages/theme-engine/
+COPY packages/workflow-engine/package.json packages/workflow-engine/
+
+RUN pnpm install --frozen-lockfile
+
+COPY packages/ packages/
+COPY apps/agent/ apps/agent/
+
+RUN npx turbo build --filter=@hospital-cms/agent
+
+# ── Stage 2: Production ───────────────────────────────────────
+FROM node:22-alpine AS runner
+
+RUN corepack enable && corepack prepare pnpm@10.32.0 --activate
+RUN addgroup --system cms && adduser --system --ingroup cms cms
+
+WORKDIR /app
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/ ./packages/
+COPY --from=builder /app/apps/agent/ ./apps/agent/
+
+USER cms
+
+ENV NODE_ENV=production
+
+CMD ["node", "apps/agent/dist/main.js"]

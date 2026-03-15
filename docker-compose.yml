@@ -1,0 +1,133 @@
+# ============================================================
+# Hospital CMS — Hospital Stack
+# Public entrypoint: hospital-proxy (:8080 by default)
+# Internal services: web, api, agent, mongo, redis
+#
+# Usage:
+#   1. Copy .env.example → .env
+#   2. Fill in secrets and your vendor control-panel URL
+#   3. docker compose --env-file .env -f docker-compose.yml up -d --build
+# ============================================================
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - hospital_mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: hospital_cms
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - hospital_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: 4000
+      MONGODB_URI: mongodb://mongo:27017/hospital_cms
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGINS: ${HOSPITAL_PUBLIC_ORIGIN:-http://localhost:8080}
+      INSTALLER_LOCK_FILE: /etc/hospital-cms/installer.lock
+      INSTANCE_PRIVATE_KEY_PATH: /etc/hospital-cms/instance.key
+      INSTANCE_PUBLIC_KEY_PATH: /etc/hospital-cms/instance.pub
+    expose:
+      - "4000"
+    volumes:
+      - hospital_config:/etc/hospital-cms
+      - hospital_storage:/var/hospital-cms
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: ""
+        NEXT_PUBLIC_CONTROL_PANEL_URL: ${CONTROL_PANEL_URL:-}
+        API_INTERNAL_URL: http://api:4000
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_URL: ""
+      NEXT_PUBLIC_CONTROL_PANEL_URL: ${CONTROL_PANEL_URL:-}
+      API_INTERNAL_URL: http://api:4000
+      INSTALLER_LOCK_FILE: /etc/hospital-cms/installer.lock
+      INSTANCE_PRIVATE_KEY_PATH: /etc/hospital-cms/instance.key
+      INSTANCE_PUBLIC_KEY_PATH: /etc/hospital-cms/instance.pub
+    expose:
+      - "3000"
+    volumes:
+      - hospital_config:/etc/hospital-cms
+
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    restart: unless-stopped
+    depends_on:
+      - api
+      - mongo
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongo:27017/hospital_cms
+      MONGODB_DB_NAME: hospital_cms
+      API_BASE_URL: http://api:4000
+      INSTALLER_LOCK_FILE: /etc/hospital-cms/installer.lock
+      AGENT_PRIVATE_KEY_PATH: /etc/hospital-cms/instance.key
+      STATE_FILE_PATH: /var/lib/hospital-agent/state.json
+      PACKAGES_DIR: /var/lib/hospital-agent/packages
+    volumes:
+      - hospital_config:/etc/hospital-cms
+      - agent_data:/var/lib/hospital-agent
+
+  hospital-proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+      - web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./deploy/nginx/hospital-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  hospital_mongo_data:
+  hospital_redis_data:
+  hospital_config:
+  hospital_storage:
+  agent_data:
