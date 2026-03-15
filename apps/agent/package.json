@@ -5,7 +5,7 @@
   "main": "./dist/main.js",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/main.ts",
+    "dev": "node --watch --import tsx src/main.ts",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",

@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "turbo run build",
+    "predev": "turbo run build --filter=@hospital-cms/api^... --filter=@hospital-cms/web^... --filter=@hospital-cms/agent^...",
     "dev": "turbo run dev --parallel --filter=@hospital-cms/api --filter=@hospital-cms/web --filter=@hospital-cms/agent",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
