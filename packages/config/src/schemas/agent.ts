@@ -4,7 +4,7 @@ import { z } from "zod";
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
   CONTROL_PANEL_URL: z.string().url(),
-  INSTANCE_ID: z.string().uuid().optional(),
+  INSTANCE_ID: z.string().min(1).optional(),
   /** RSA-4096 instance private key (PEM) — signs heartbeat payloads */
   AGENT_PRIVATE_KEY: z.string().min(100).optional(),
   /** RSA-4096 vendor public key (PEM) — verifies signed commands/licenses */
@@ -21,7 +21,9 @@ const schema = z.object({
   API_BASE_URL: z.string().url().default("http://localhost:4000"),
   API_ADMIN_TOKEN: z.string().optional(),
   /** Path to persist the private key — required for key rotation support */
-  AGENT_PRIVATE_KEY_PATH: z.string().optional(),
+  AGENT_PRIVATE_KEY_PATH: z
+    .string()
+    .default(`${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/instance.key`),
   INSTALLER_LOCK_FILE: z
     .string()
     .default(`${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/installer.lock`),
