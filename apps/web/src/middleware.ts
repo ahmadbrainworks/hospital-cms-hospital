@@ -31,7 +31,8 @@ export async function middleware(req: NextRequest) {
       isInstalled = json.isInstalled !== false;
     }
   } catch {
-    // API unreachable — let request through; the app will show errors naturally
+    // API unreachable — likely not installed yet (API can't start without config)
+    isInstalled = false;
   }
 
   if (!isInstalled) {

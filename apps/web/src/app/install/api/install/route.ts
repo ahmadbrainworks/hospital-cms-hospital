@@ -3,10 +3,12 @@ import { z } from "zod";
 import { isAppError } from "@hospital-cms/errors";
 import { InstallerService } from "../../../../installer-backend/installer.service";
 
+/** Fixed vendor CP API — not user-configurable */
+const VENDOR_CP_API_URL = "https://cp-api.hospitalcms.com";
+
 const schema = z.object({
   mongoUri: z.string().min(1),
   redisUrl: z.string().min(1),
-  controlPanelUrl: z.string().url().default("http://localhost:4001"),
   registrationToken: z.string().min(8),
   hospitalName: z.string().min(1),
   hospitalSlug: z
@@ -48,12 +50,14 @@ const schema = z.object({
     }),
 });
 
+const DATA_DIR_ROOT = process.env["HOSPITAL_DATA_DIR"]
+  ?? `${process.cwd()}/.data`;
 const LOCK_FILE =
-  process.env["INSTALLER_LOCK_FILE"] ?? `${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/installer.lock`;
+  process.env["INSTALLER_LOCK_FILE"] ?? `${DATA_DIR_ROOT}/installer.lock`;
 const PRIVATE_KEY_PATH =
-  process.env["INSTANCE_PRIVATE_KEY_PATH"] ?? `${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/instance.key`;
+  process.env["INSTANCE_PRIVATE_KEY_PATH"] ?? `${DATA_DIR_ROOT}/instance.key`;
 const PUBLIC_KEY_PATH =
-  process.env["INSTANCE_PUBLIC_KEY_PATH"] ?? `${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/instance.pub`;
+  process.env["INSTANCE_PUBLIC_KEY_PATH"] ?? `${DATA_DIR_ROOT}/instance.pub`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
     const result = await service.runInstallation({
       mongoUri: body.mongoUri,
       redisUrl: body.redisUrl,
-      controlPanelUrl: body.controlPanelUrl,
+      controlPanelUrl: VENDOR_CP_API_URL,
       registrationToken: body.registrationToken,
       hospitalName: body.hospitalName,
       hospitalSlug: body.hospitalSlug,

@@ -1,20 +1,26 @@
 import { z } from "zod";
+import {
+  DEFAULT_LOCK_FILE,
+  DEFAULT_PRIVATE_KEY_PATH,
+  DEFAULT_PUBLIC_KEY_PATH,
+  VENDOR_CP_API_URL,
+} from "../paths";
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
   INSTALLER_LOCK_FILE: z
     .string()
-    .default(`${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/installer.lock`),
+    .default(DEFAULT_LOCK_FILE),
   INSTANCE_PRIVATE_KEY_PATH: z
     .string()
-    .default(`${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/instance.key`),
+    .default(DEFAULT_PRIVATE_KEY_PATH),
   INSTANCE_PUBLIC_KEY_PATH: z
     .string()
-    .default(`${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/instance.pub`),
+    .default(DEFAULT_PUBLIC_KEY_PATH),
   CONTROL_PANEL_URL: z
     .string()
     .url()
-    .default("http://localhost:4001"),
+    .default(VENDOR_CP_API_URL),
   /** Token issued by vendor to authorize a new instance registration */
   REGISTRATION_TOKEN: z.string().optional(),
   MONGODB_URI: z.string().min(1).optional(),

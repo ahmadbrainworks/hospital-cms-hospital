@@ -1,7 +1,15 @@
 import { z } from "zod";
 import { config as loadDotenv } from "dotenv";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  DEFAULT_LOCK_FILE,
+  DEFAULT_PRIVATE_KEY_PATH,
+  DEFAULT_PUBLIC_KEY_PATH,
+  DEFAULT_PLUGINS_DIR,
+  DEFAULT_THEMES_DIR,
+  VENDOR_CP_API_URL,
+} from "./paths";
 
 function loadEnvironmentFiles(): void {
   const candidateRoots = [
@@ -22,7 +30,53 @@ function loadEnvironmentFiles(): void {
   }
 }
 
+/**
+ * Read the installer lock file and inject generated values into process.env
+ * for any key that is not already set. This lets all apps pick up secrets
+ * (JWT_SECRET, ENCRYPTION_KEY, VENDOR_PUBLIC_KEY, etc.) that the installer
+ * generated during installation — no manual .env editing required.
+ *
+ * Env vars always take precedence (we only set if missing or empty).
+ */
+function loadInstallerOutput(): void {
+  const lockFilePath =
+    process.env["INSTALLER_LOCK_FILE"] ?? DEFAULT_LOCK_FILE;
+
+  if (!existsSync(lockFilePath)) return;
+
+  try {
+    const data = JSON.parse(readFileSync(lockFilePath, "utf-8")) as Record<string, unknown>;
+
+    // Map lock-file keys → env var names
+    const mapping: Record<string, string | undefined> = {
+      INSTANCE_ID: data["instanceId"] as string | undefined,
+      VENDOR_PUBLIC_KEY: data["vendorPublicKey"] as string | undefined,
+      JWT_SECRET: data["jwtSecret"] as string | undefined,
+      REFRESH_TOKEN_SECRET: data["refreshTokenSecret"] as string | undefined,
+      ENCRYPTION_KEY: data["encryptionKey"] as string | undefined,
+      MFA_ENCRYPTION_KEY: data["mfaEncryptionKey"] as string | undefined,
+      AGENT_SECRET: data["agentSecret"] as string | undefined,
+      API_ADMIN_TOKEN: data["agentSecret"] as string | undefined, // Same shared secret
+      MONGODB_URI: data["mongoUri"] as string | undefined,
+      REDIS_URL: data["redisUrl"] as string | undefined,
+    };
+
+    for (const [envKey, value] of Object.entries(mapping)) {
+      if (value && (!process.env[envKey] || process.env[envKey] === "")) {
+        process.env[envKey] = value;
+      }
+    }
+  } catch {
+    // Lock file corrupt or unreadable — ignore, let schema validation catch it
+  }
+}
+
 loadEnvironmentFiles();
+loadInstallerOutput();
+
+/** Re-read the installer lock file and inject into process.env.
+ *  Call this after installation completes (e.g. when the API auto-restarts). */
+export { loadInstallerOutput };
 
 // ENVIRONMENT CONFIGURATION WITH STRICT VALIDATION
 // Fails fast on startup if any required variable is missing.
@@ -49,16 +103,16 @@ const envSchema = z.object({
   INSTANCE_ID: z.string().optional(),
   INSTANCE_PRIVATE_KEY_PATH: z
     .string()
-    .default(`${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/instance.key`),
+    .default(DEFAULT_PRIVATE_KEY_PATH),
   INSTANCE_PUBLIC_KEY_PATH: z
     .string()
-    .default(`${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/instance.pub`),
+    .default(DEFAULT_PUBLIC_KEY_PATH),
 
   // Control Panel
   CONTROL_PANEL_URL: z
     .string()
     .url("CONTROL_PANEL_URL must be a valid URL")
-    .default("https://control.hospitalcms.io"),
+    .default(VENDOR_CP_API_URL),
   CONTROL_PANEL_API_KEY: z.string().optional(),
   VENDOR_PUBLIC_KEY: z.string().default(""),
 
@@ -76,7 +130,7 @@ const envSchema = z.object({
     .default("http://localhost:3000")
     .transform((s) => s.split(",").map((o) => o.trim())),
 
-  INSTALLER_LOCK_FILE: z.string().default(`${process.env["HOME"] ?? "/home/ahmad"}/hospital-cms/installer.lock`),
+  INSTALLER_LOCK_FILE: z.string().default(DEFAULT_LOCK_FILE),
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
@@ -86,8 +140,8 @@ const envSchema = z.object({
   AUDIT_LOG_COLLECTION: z.string().default("audit_logs"),
 
   // Plugin / Theme Storage
-  PLUGIN_STORAGE_PATH: z.string().default("/var/hospital-cms/plugins"),
-  THEME_STORAGE_PATH: z.string().default("/var/hospital-cms/themes"),
+  PLUGIN_STORAGE_PATH: z.string().default(DEFAULT_PLUGINS_DIR),
+  THEME_STORAGE_PATH: z.string().default(DEFAULT_THEMES_DIR),
 
   // Agent shared secret — must match the agent's API_ADMIN_TOKEN.
   // Required in production so package install routes are agent-only.
@@ -153,3 +207,5 @@ export type { ControlPanelConfig } from "./schemas/control-panel";
 
 export { getAgentConfig as getAgentConfigFromPackage, resetAgentConfig } from "./schemas/agent";
 export type { AgentConfig as AgentConfigFromPackage } from "./schemas/agent";
+
+export { DATA_DIR, DEFAULT_LOCK_FILE, VENDOR_CP_API_URL } from "./paths";

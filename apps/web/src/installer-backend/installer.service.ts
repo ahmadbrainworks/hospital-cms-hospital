@@ -175,7 +175,60 @@ export class InstallerService {
       );
       log.info({ dir: keyDir }, 'RSA key pair saved');
 
-      // 5. Create hospital instance document
+      // 5. Generate all application secrets
+      log.info('Generating application secrets');
+      const generatedSecrets = {
+        jwtSecret: generateSecureToken(32),
+        refreshTokenSecret: generateSecureToken(32),
+        encryptionKey: generateSecureToken(32),
+        mfaEncryptionKey: generateSecureToken(32),
+        agentSecret: generateSecureToken(32),
+      };
+
+      // 6. Register with vendor control panel (before DB writes so we get vendorPublicKey)
+      let vendorPublicKey: string | undefined;
+      log.info({ url: config.controlPanelUrl }, 'Registering with control panel');
+      try {
+        const regRes = await fetch(
+          `${config.controlPanelUrl.replace(/\/$/, '')}/api/instances/register`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Registration-Token': config.registrationToken,
+            },
+            body: JSON.stringify({
+              instanceId,
+              hospitalName: config.hospitalName,
+              hospitalSlug: config.hospitalSlug,
+              publicKey: keyPair.publicKey,
+              agentVersion: '1.0.0',
+            }),
+            signal: AbortSignal.timeout(15000),
+          },
+        );
+        if (!regRes.ok) {
+          const errBody = await regRes.json().catch(() => ({}));
+          log.warn({ status: regRes.status, err: errBody }, 'Control panel registration failed — continuing without vendor key');
+        } else {
+          const regBody = await regRes.json() as {
+            success: boolean;
+            data?: {
+              instance?: { instanceId?: string };
+              vendorPublicKey?: string;
+            };
+          };
+          vendorPublicKey = regBody.data?.vendorPublicKey;
+          log.info(
+            { registeredId: regBody.data?.instance?.instanceId, hasVendorKey: !!vendorPublicKey },
+            'Registered with control panel',
+          );
+        }
+      } catch (err) {
+        log.warn({ err: String(err) }, 'Could not reach control panel — continuing without vendor key');
+      }
+
+      // 7. Create hospital instance document
       const hospitalRepo = new HospitalRepository(db);
       await hospitalRepo.insertOne({
         instanceId,
@@ -200,7 +253,7 @@ export class InstallerService {
       });
       log.info('Hospital instance created');
 
-      // 6. Create SUPER_ADMIN user
+      // 8. Create SUPER_ADMIN user
       const userRepo = new UserRepository(db);
       const passwordHash = await hashPassword(config.adminUser.password);
       await userRepo.insertOne({
@@ -223,7 +276,7 @@ export class InstallerService {
       });
       log.info({ username: config.adminUser.username }, 'SUPER_ADMIN created');
 
-      // 7. Write lock file (prevents re-installation)
+      // 9. Write lock file with all generated values (prevents re-installation)
       const lockDir = config.lockFilePath.substring(
         0,
         config.lockFilePath.lastIndexOf('/')
@@ -235,43 +288,24 @@ export class InstallerService {
           instanceId,
           installedAt: new Date().toISOString(),
           version: '1.0.0',
+          // Infrastructure (entered by user in installer)
+          mongoUri: config.mongoUri,
+          redisUrl: config.redisUrl,
+          controlPanelUrl: config.controlPanelUrl,
+          // Vendor key (received from CP during registration)
+          vendorPublicKey: vendorPublicKey ?? null,
+          // Auto-generated secrets
+          jwtSecret: generatedSecrets.jwtSecret,
+          refreshTokenSecret: generatedSecrets.refreshTokenSecret,
+          encryptionKey: generatedSecrets.encryptionKey,
+          mfaEncryptionKey: generatedSecrets.mfaEncryptionKey,
+          agentSecret: generatedSecrets.agentSecret,
         }),
         { mode: 0o600 }
       );
       log.info({ path: config.lockFilePath }, 'Installer locked');
 
       log.info({ instanceId }, 'Installation completed successfully');
-
-      // 8. Register with vendor control panel
-      log.info({ url: config.controlPanelUrl }, 'Registering with control panel');
-      try {
-        const regRes = await fetch(
-          `${config.controlPanelUrl.replace(/\/$/, '')}/api/instances/register`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Registration-Token': config.registrationToken,
-            },
-            body: JSON.stringify({
-              hospitalName: config.hospitalName,
-              hospitalSlug: config.hospitalSlug,
-              publicKey: keyPair.publicKey,
-              agentVersion: '1.0.0',
-            }),
-            signal: AbortSignal.timeout(15000),
-          },
-        );
-        if (!regRes.ok) {
-          const errBody = await regRes.json().catch(() => ({}));
-          log.warn({ status: regRes.status, err: errBody }, 'Control panel registration failed — installation completed locally');
-        } else {
-          const regBody = await regRes.json();
-          log.info({ instanceId: regBody.data?.instance?.instanceId }, 'Registered with control panel');
-        }
-      } catch (err) {
-        log.warn({ err: String(err) }, 'Could not reach control panel — installation completed locally');
-      }
 
       return { instanceId, publicKey: keyPair.publicKey };
     } finally {

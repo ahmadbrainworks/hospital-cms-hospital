@@ -10,3 +10,6 @@ coverage/
 *.key
 *.pem
 *.tsbuildinfo
+
+# Installer-generated data (keys, lock file, packages, state)
+.data/

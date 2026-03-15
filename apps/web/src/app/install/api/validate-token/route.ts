@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+/** Fixed vendor CP API — not user-configurable */
+const VENDOR_CP_API_URL = "https://cp-api.hospitalcms.com";
+
 const schema = z.object({
-  controlPanelUrl: z.string().url(),
   registrationToken: z.string().min(8),
 });
 
@@ -15,7 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = schema.parse(await req.json());
 
-    const url = `${body.controlPanelUrl.replace(/\/$/, "")}/api/registration-tokens/validate`;
+    const url = `${VENDOR_CP_API_URL}/api/registration-tokens/validate`;
 
     let cpRes: Response;
     try {
@@ -31,7 +33,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error: {
             code: "CONTROL_PANEL_UNREACHABLE",
-            message: `Cannot reach control panel at ${body.controlPanelUrl}: ${err instanceof Error ? err.message : "Network error"}`,
+            message: `Cannot reach control panel: ${err instanceof Error ? err.message : "Network error"}`,
           },
         },
         { status: 502 },

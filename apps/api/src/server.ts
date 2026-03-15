@@ -1,19 +1,91 @@
-import { getConfig } from "@hospital-cms/config";
-import { logger } from "@hospital-cms/logger";
-import { connectDatabase, ensureIndexes } from "@hospital-cms/database";
-import { createApp } from "./app";
+import express from "express";
+import cors from "cors";
+import { existsSync } from "node:fs";
+import { DEFAULT_LOCK_FILE } from "@hospital-cms/config";
 
 // SERVER BOOTSTRAP
-// Validates config → connects DB → ensures indexes → starts HTTP
+// Checks installation status first:
+//   - Not installed → starts minimal health-only server so the web
+//     middleware can detect the state and redirect to /install.
+//   - Installed → validates config → connects DB → starts full API.
 
-const log = logger("api:server");
+const API_PORT = Number(process.env["API_PORT"] ?? 4000);
+const API_HOST = process.env["API_HOST"] ?? "0.0.0.0";
+const LOCK_FILE = process.env["INSTALLER_LOCK_FILE"] ?? DEFAULT_LOCK_FILE;
 
-async function bootstrap(): Promise<void> {
-  const cfg = getConfig(); // Throws immediately if env is invalid
+/**
+ * Minimal server that only serves /health while waiting for installation.
+ * No database, no config validation — just enough for the web middleware.
+ */
+function startInstallerModeServer(): void {
+  const app = express();
+  app.use(cors());
+
+  app.get("/health", (_req, res) => {
+    // Re-check on every request so it picks up installation immediately
+    res.json({
+      status: "ok",
+      isInstalled: existsSync(LOCK_FILE),
+      timestamp: new Date().toISOString(),
+      mode: "awaiting-installation",
+    });
+  });
+
+  app.all("*", (_req, res) => {
+    res.status(503).json({
+      success: false,
+      error: {
+        code: "NOT_INSTALLED",
+        message: "Hospital CMS is not installed yet. Complete the installer at /install.",
+      },
+    });
+  });
+
+  const server = app.listen(API_PORT, API_HOST, () => {
+    console.log(`[api] Awaiting installation — health-only server on :${API_PORT}`);
+    console.log(`[api] Complete the installer, then restart the API.`);
+  });
+
+  // Watch for lock file creation → auto-restart into full mode
+  const checkInterval = setInterval(() => {
+    if (existsSync(LOCK_FILE)) {
+      console.log("[api] Installation detected — restarting into full mode...");
+      clearInterval(checkInterval);
+      server.close(() => {
+        bootstrapFull();
+      });
+    }
+  }, 2000);
+
+  const shutdown = (signal: string) => {
+    console.log(`[api] ${signal} received — shutting down installer-mode server`);
+    clearInterval(checkInterval);
+    server.close(() => process.exit(0));
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+}
+
+/**
+ * Full server with config validation, database, and all routes.
+ */
+async function bootstrapFull(): Promise<void> {
+  // These imports are deferred so they only run after config is available
+  const { getConfig, resetConfig, loadInstallerOutput } = await import("@hospital-cms/config");
+  const { logger } = await import("@hospital-cms/logger");
+  const { connectDatabase, ensureIndexes } = await import("@hospital-cms/database");
+  const { createApp } = await import("./app");
+
+  const log = logger("api:server");
+
+  // Re-read the lock file (may have been written after module-load time)
+  loadInstallerOutput();
+  resetConfig();
+  const cfg = getConfig();
 
   log.info({ env: cfg.NODE_ENV }, "Starting Hospital CMS API");
 
-  // 0. Startup validation — warn about missing production-critical vars
+  // Startup validation — warn about missing production-critical vars
   if (cfg.NODE_ENV === "production") {
     const warnings: string[] = [];
 
@@ -87,7 +159,12 @@ async function bootstrap(): Promise<void> {
   });
 }
 
-bootstrap().catch((err) => {
-  console.error("Fatal startup error:", err);
-  process.exit(1);
-});
+// Entry point: check lock file to decide which mode to start in
+if (existsSync(LOCK_FILE)) {
+  bootstrapFull().catch((err) => {
+    console.error("Fatal startup error:", err);
+    process.exit(1);
+  });
+} else {
+  startInstallerModeServer();
+}

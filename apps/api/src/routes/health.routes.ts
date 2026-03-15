@@ -2,10 +2,10 @@ import { Router } from 'express';
 import { Db } from 'mongodb';
 import { existsSync } from 'node:fs';
 import { logger } from '@hospital-cms/logger';
+import { DEFAULT_LOCK_FILE } from '@hospital-cms/config';
 
 const LOCK_FILE =
-  process.env['INSTALLER_LOCK_FILE'] ??
-  `${process.env['HOME'] ?? '/home/ahmad'}/hospital-cms/installer.lock`;
+  process.env['INSTALLER_LOCK_FILE'] ?? DEFAULT_LOCK_FILE;
 
 const log = logger('api:health');
 
