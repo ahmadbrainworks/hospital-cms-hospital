@@ -1,0 +1,46 @@
+{
+  "name": "@hospital-cms/web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev -p 3000",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.48.2",
+    "@hookform/resolvers": "^3.3.2",
+    "zod": "^3.22.4",
+    "swr": "^2.2.4",
+    "clsx": "^2.0.0",
+    "@hospital-cms/auth": "workspace:*",
+    "@hospital-cms/config": "workspace:*",
+    "@hospital-cms/contracts": "workspace:*",
+    "@hospital-cms/crypto": "workspace:*",
+    "@hospital-cms/crypto-vendor": "workspace:*",
+    "@hospital-cms/database": "workspace:*",
+    "@hospital-cms/errors": "workspace:*",
+    "@hospital-cms/shared-types": "workspace:*",
+    "@hospital-cms/rbac": "workspace:*",
+    "@hospital-cms/theme-engine": "workspace:*",
+    "mongodb": "^6.3.0",
+    "redis": "^5.11.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "tailwindcss": "^3.3.6",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "eslint": "^8.55.0",
+    "eslint-config-next": "^14.0.4"
+  }
+}

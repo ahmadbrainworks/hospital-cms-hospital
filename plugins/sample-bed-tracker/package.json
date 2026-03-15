@@ -1,0 +1,23 @@
+{
+  "name": "@hospital-cms/plugin-sample-bed-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sample Hospital CMS plugin — tracks bed occupancy per ward with real-time events",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "sign": "node scripts/sign-manifest.js"
+  },
+  "dependencies": {
+    "@hospital-cms/plugin-runtime": "workspace:*",
+    "@hospital-cms/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3"
+  }
+}

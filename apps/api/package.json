@@ -1,0 +1,48 @@
+{
+  "name": "@hospital-cms/api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@hospital-cms/audit": "workspace:*",
+    "@hospital-cms/auth": "workspace:*",
+    "@hospital-cms/config": "workspace:*",
+    "@hospital-cms/contracts": "workspace:*",
+    "@hospital-cms/crypto": "workspace:*",
+    "@hospital-cms/database": "workspace:*",
+    "@hospital-cms/errors": "workspace:*",
+    "@hospital-cms/logger": "workspace:*",
+    "@hospital-cms/plugin-runtime": "workspace:*",
+    "@hospital-cms/rbac": "workspace:*",
+    "@hospital-cms/shared-types": "workspace:*",
+    "@hospital-cms/theme-engine": "workspace:*",
+    "@hospital-cms/workflow-engine": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "mongodb": "^6.3.0",
+    "uuid": "^9.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "@types/supertest": "^6.0.2",
+    "@types/uuid": "^9.0.7",
+    "supertest": "^6.3.3",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  }
+}

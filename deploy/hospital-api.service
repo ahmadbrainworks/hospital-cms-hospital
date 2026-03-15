@@ -1,0 +1,17 @@
+[Unit]
+Description=Hospital CMS API
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=hospitalcms
+Group=hospitalcms
+WorkingDirectory=/opt/hospital-cms
+EnvironmentFile=/etc/hospital-cms/hospital.env
+ExecStart=/usr/bin/env pnpm --dir /opt/hospital-cms/apps/api start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

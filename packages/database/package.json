@@ -1,0 +1,34 @@
+{
+  "name": "@hospital-cms/database",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "mongodb": "^6.3.0",
+    "@hospital-cms/shared-types": "workspace:*",
+    "@hospital-cms/logger": "workspace:*",
+    "@hospital-cms/errors": "workspace:*",
+    "@hospital-cms/config": "workspace:*",
+    "@hospital-cms/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  }
+}

@@ -1,0 +1,75 @@
+# ============================================================
+# Hospital CMS — Vendor Stack
+# Public entrypoint: vendor-proxy (:8080 by default)
+# Internal services: control-panel, vendor-dashboard, mongo
+#
+# Usage:
+#   1. Copy .env.control-panel.example → .env.control-panel
+#   2. Fill in secrets and public URL
+#   3. docker compose --env-file .env.control-panel up -d --build
+# ============================================================
+
+services:
+  # --- MongoDB for Control Panel ---
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - vendor_mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: hospital_cp
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Control Panel API (Express :4001) ---
+  control-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile.control-panel
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - .env.control-panel
+    environment:
+      NODE_ENV: production
+      CONTROL_PANEL_PORT: 4001
+      CONTROL_PANEL_MONGODB_URI: mongodb://mongo:27017/hospital_cp
+      VENDOR_DASHBOARD_ORIGIN: ${VENDOR_PUBLIC_ORIGIN:-http://localhost:8080}
+    expose:
+      - "4001"
+
+  # --- Vendor Dashboard (Next.js :3003 internal) ---
+  vendor-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.vendor-dashboard
+      args:
+        NEXT_PUBLIC_CONTROL_PANEL_URL: ""
+    restart: unless-stopped
+    depends_on:
+      - control-panel
+    environment:
+      NODE_ENV: production
+      PORT: 3003
+      HOSTNAME: 0.0.0.0
+    expose:
+      - "3003"
+
+  vendor-proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - control-panel
+      - vendor-dashboard
+    ports:
+      - "8080:80"
+    volumes:
+      - ./deploy/nginx/vendor-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  vendor_mongo_data:

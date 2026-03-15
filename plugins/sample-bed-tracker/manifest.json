@@ -1,0 +1,54 @@
+{
+  "pluginId": "sample-bed-tracker",
+  "name": "Sample Bed Tracker",
+  "version": "1.0.0",
+  "description": "Tracks hospital bed occupancy per ward. Demonstrates the full plugin lifecycle: activate/deactivate, scoped storage, event subscriptions, route handlers, and UI slots.",
+  "author": "Hospital CMS Vendor",
+  "vendorSigned": true,
+  "publicKeyId": "vendor-key-v1",
+  "entryPoint": "./dist/index.js",
+  "permissions": [
+    "patient:read",
+    "encounter:read"
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/summary",
+      "description": "Get bed occupancy summary across all wards"
+    },
+    {
+      "method": "GET",
+      "path": "/ward/:wardId",
+      "description": "Get bed status for a specific ward"
+    },
+    {
+      "method": "POST",
+      "path": "/ward/:wardId/assign",
+      "description": "Assign a patient to a bed in the ward"
+    },
+    {
+      "method": "POST",
+      "path": "/ward/:wardId/release",
+      "description": "Release a bed in the ward"
+    }
+  ],
+  "events": [
+    "encounter.status.changed",
+    "patient.discharged"
+  ],
+  "uiSlots": [
+    {
+      "slotId": "dashboard-widget",
+      "component": "BedOccupancyWidget",
+      "props": { "refreshIntervalMs": 30000 }
+    }
+  ],
+  "config": {
+    "defaultWards": ["ICU", "General", "Pediatrics", "Maternity", "Emergency"],
+    "maxBedsPerWard": 50,
+    "alertThresholdPercent": 90
+  },
+  "minCoreVersion": "1.0.0",
+  "signature": "__VENDOR_SIGNATURE_PLACEHOLDER__"
+}

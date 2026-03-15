@@ -1,0 +1,38 @@
+{
+  "pluginId": "patient-alerts",
+  "name": "Patient Alerts",
+  "version": "1.0.0",
+  "description": "Raises alerts for high-risk patient encounters: allergy conflicts, critical lab values, and overdue assessments.",
+  "author": "Hospital CMS Vendor",
+  "vendorSigned": true,
+  "entryPoint": "./dist/index.js",
+  "permissions": [
+    "patient:read",
+    "encounter:read",
+    "lab:read",
+    "alert:create",
+    "alert:read"
+  ],
+  "routes": [
+    { "path": "/alerts", "handler": "listAlerts" },
+    { "path": "/alerts/:patientId", "handler": "getPatientAlerts" }
+  ],
+  "events": {
+    "subscribes": [
+      "encounter.status.changed",
+      "lab.result.received",
+      "patient.updated"
+    ],
+    "emits": [
+      "alert.created",
+      "alert.resolved"
+    ]
+  },
+  "config": {
+    "criticalLabThreshold": "CRITICAL",
+    "allergyCheckEnabled": true,
+    "overdueAssessmentHours": 24
+  },
+  "minApiVersion": "1.0.0",
+  "signature": "__VENDOR_SIGNATURE_PLACEHOLDER__"
+}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Hospital CMS Vendor Control Panel
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=hospitalcms
+Group=hospitalcms
+WorkingDirectory=/opt/hospital-cms
+EnvironmentFile=/etc/hospital-cms/control-panel.env
+ExecStart=/usr/bin/env pnpm --dir /opt/hospital-cms/apps/control-panel start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

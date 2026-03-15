@@ -1,0 +1,23 @@
+{
+  "name": "@hospital-cms/plugin-patient-alerts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Example Hospital CMS plugin — raises alerts for high-risk patient encounters",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "sign": "node scripts/sign-manifest.js"
+  },
+  "dependencies": {
+    "@hospital-cms/plugin-runtime": "workspace:*",
+    "@hospital-cms/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.next/
+coverage/
+*.log
+.env
+.env.hospital
+.env.control-panel
+.env.local
+.env.production
+.turbo/
+*.key
+*.pem
+installer.lock
+/var/hospital-cms/

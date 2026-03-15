@@ -1,0 +1,17 @@
+[Unit]
+Description=Hospital CMS Vendor Dashboard
+After=network.target control-panel.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=hospitalcms
+Group=hospitalcms
+WorkingDirectory=/opt/hospital-cms
+EnvironmentFile=/etc/hospital-cms/control-panel.env
+ExecStart=/usr/bin/env pnpm --dir /opt/hospital-cms/apps/vendor-dashboard start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
