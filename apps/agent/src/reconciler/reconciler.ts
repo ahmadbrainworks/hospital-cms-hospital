@@ -1,4 +1,5 @@
 import { createLogger } from "@hospital-cms/logger";
+import { readFile } from "node:fs/promises";
 import type {
   EnrichedDesiredStateDocument,
   EnrichedDesiredPackageEntry,
@@ -18,6 +19,7 @@ export class Reconciler {
     private readonly packageInstaller: PackageInstaller,
     private readonly apiBaseUrl: string,
     private readonly adminToken: string | undefined,
+    private readonly hospitalId: string,
   ) {}
 
   async reconcile(
@@ -140,26 +142,31 @@ export class Reconciler {
       "Installing package",
     );
     try {
-      await this.packageInstaller.downloadAndVerifyPackage(entry);
+      const zipPath = await this.packageInstaller.downloadAndVerifyPackage(entry);
+      const packageBuffer = await readFile(zipPath);
+      const packageBase64 = packageBuffer.toString("base64");
 
       if (entry.packageType === "plugin") {
-        await this.callApi(
-          "POST",
-          `/api/v1/plugins/${entry.packageId}/install`,
-          { version: entry.version },
-        );
-        await this.callApi(
-          "POST",
-          `/api/v1/plugins/${entry.packageId}/activate`,
-          {},
-        );
-      } else if (entry.packageType === "theme") {
-        await this.callApi("POST", "/api/v1/themes/activate", {
-          themeId: entry.packageId,
-          version: entry.version,
+        const manifest = await this.extractManifestFromZip(zipPath);
+        await this.callApi("POST", "/api/agent/apply-plugin", {
+          hospitalId: this.hospitalId,
+          manifestJson: JSON.stringify(manifest),
+          packageBase64,
+          actorId: "agent",
         });
+      } else if (entry.packageType === "theme") {
+        const manifest = await this.extractManifestFromZip(zipPath);
+        await this.callApi("POST", "/api/agent/apply-theme", {
+          hospitalId: this.hospitalId,
+          manifestJson: JSON.stringify(manifest),
+          actorId: "agent",
+        });
+      } else if (entry.packageType === "widget") {
+        logger.info({ packageId: entry.packageId }, "Widget installation - not yet implemented");
+        // TODO: implement widget installation
+        // const manifest = await this.extractManifestFromZip(zipPath);
+        // await this.callApi("POST", "/api/agent/apply-widget", { ... });
       }
-      // Widget installation would go here
 
       const pkg: InstalledPackage = {
         packageId: entry.packageId,
@@ -195,6 +202,23 @@ export class Reconciler {
       if (idx >= 0) state.installedPackages[idx] = pkg;
       else state.installedPackages.push(pkg);
       summary.packagesFailed.push({ packageId: entry.packageId, error: errMsg });
+    }
+  }
+
+  private async extractManifestFromZip(zipPath: string): Promise<unknown> {
+    const extractZip = (await import("extract-zip")).default;
+    const { mkdtemp, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+
+    const tempDir = await mkdtemp(join(tmpdir(), "pkg-extract-"));
+    try {
+      await extractZip(zipPath, { dir: tempDir });
+      const manifestPath = join(tempDir, "manifest.json");
+      const manifestContent = await readFile(manifestPath, "utf-8");
+      return JSON.parse(manifestContent);
+    } finally {
+      void rm(tempDir, { recursive: true, force: true });
     }
   }
 
@@ -316,7 +340,8 @@ export class Reconciler {
       method,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${this.adminToken}`,
+        "Authorization": `Bearer ${this.adminToken}`,
+        "X-Agent-Secret": this.adminToken,
       },
       signal: AbortSignal.timeout(30000),
     };
