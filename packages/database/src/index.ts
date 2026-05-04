@@ -13,6 +13,8 @@ export { CounterService } from "./counter";
 // Repositories
 export { UserRepository } from "./repositories/user.repository";
 export { PatientRepository } from "./repositories/patient.repository";
+export { DoctorRepository } from "./repositories/doctor.repository";
+export { WardRepository } from "./repositories/ward.repository";
 export { EncounterRepository } from "./repositories/encounter.repository";
 export { InvoiceRepository } from "./repositories/invoice.repository";
 export { AuditRepository } from "./repositories/audit.repository";

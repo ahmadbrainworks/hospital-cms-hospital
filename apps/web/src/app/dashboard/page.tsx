@@ -2,9 +2,10 @@
 
 import useSWR from "swr";
 import { useAuth } from "../../lib/auth-context";
-import { api } from "../../lib/api-client";
+import { api, ApiError } from "../../lib/api-client";
 import { hasPermission } from "../../lib/permissions";
 import { Permission } from "@hospital-cms/shared-types";
+import { WidgetZone } from "../../components/widget/WidgetZone";
 
 // DASHBOARD HOME
 // Overview metrics, quick actions, and recent activity.
@@ -48,14 +49,20 @@ export default function DashboardPage() {
     ? hasPermission(user, Permission.BILLING_READ)
     : false;
 
-  const { data: patientsData } = useSWR(
+  const { data: patientsData, error: patientsError } = useSWR(
     canReadPatients ? "/api/v1/patients?limit=1" : null,
     fetcher,
   );
-  const { data: encountersData } = useSWR(
+  const { data: encountersData, error: encountersError } = useSWR(
     canReadPatients ? "/api/v1/encounters?limit=1" : null,
     fetcher,
   );
+
+  const licenseError = [patientsError, encountersError].find(
+    (e) =>
+      e instanceof ApiError &&
+      (e.code === "LICENSE_EXPIRED" || e.code === "LICENSE_FEATURE_DISABLED"),
+  ) as ApiError | undefined;
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -80,6 +87,24 @@ export default function DashboardPage() {
           })}
         </p>
       </div>
+
+      {/* Widget Zone: Dashboard Top */}
+      <WidgetZone zone="dashboard.top" className="mb-8" />
+
+      {/* License warning */}
+      {licenseError && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <span className="text-xl flex-shrink-0">&#9888;</span>
+          <div>
+            <h3 className="font-semibold text-amber-800 text-sm">License Issue</h3>
+            <p className="text-sm text-amber-700 mt-0.5">
+              {licenseError.code === "LICENSE_FEATURE_DISABLED"
+                ? "Some features are not available on your current license tier. Contact your vendor to upgrade."
+                : "Your license has expired or is not active. Some features may be unavailable. Contact your vendor to renew."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -171,13 +196,16 @@ export default function DashboardPage() {
       </div>
 
       {/* Role-specific info */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-8">
         <p className="text-sm text-blue-700">
           <strong>Role:</strong> {user?.role} — You have access to{" "}
           {user?.role === "SUPER_ADMIN" ? "all" : "authorized"} sections of this
           system.
         </p>
       </div>
+
+      {/* Widget Zone: Dashboard Bottom */}
+      <WidgetZone zone="dashboard.bottom" />
     </div>
   );
 }

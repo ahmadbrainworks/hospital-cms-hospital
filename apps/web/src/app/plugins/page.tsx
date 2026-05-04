@@ -1,10 +1,11 @@
 "use client";
 
 import useSWR from "swr";
-import { api } from "../../lib/api-client";
+import { api, ApiError } from "../../lib/api-client";
 import { useAuth } from "../../lib/auth-context";
 import { hasPermission } from "../../lib/permissions";
 import { Permission } from "@hospital-cms/shared-types";
+import type { PaginatedResult } from "@hospital-cms/shared-types";
 
 interface Plugin {
   pluginId: string;
@@ -16,8 +17,12 @@ interface Plugin {
 }
 
 const PLUGINS_URL = "/api/v1/plugins";
-const fetcher = (url: string): Promise<any> =>
-  api.get<Plugin[]>(url).then((r) => r.data ?? []);
+const fetcher = (url: string): Promise<Plugin[]> =>
+  api.get<PaginatedResult<Plugin> | Plugin[]>(url).then((r) => {
+    const payload = r.data;
+    if (Array.isArray(payload)) return payload;
+    return Array.isArray(payload?.items) ? payload.items : [];
+  });
 
 function StatusBadge({ status }: { status: Plugin["status"] }) {
   const map: Record<string, string> = {
@@ -67,12 +72,50 @@ export default function PluginsPage() {
     ? hasPermission(user, Permission.SYSTEM_PLUGINS_MANAGE)
     : false;
 
-  const { data: plugins, isLoading } = useSWR<Plugin[]>(PLUGINS_URL, fetcher, {
+  const { data: rawPlugins, isLoading, error } = useSWR<Plugin[]>(PLUGINS_URL, fetcher, {
     refreshInterval: 30_000,
   });
+  const plugins = Array.isArray(rawPlugins) ? rawPlugins : [];
 
-  const active = plugins?.filter((p) => p.status === "active") ?? [];
-  const inactive = plugins?.filter((p) => p.status !== "active") ?? [];
+  const isLicenseError =
+    error instanceof ApiError &&
+    (error.code === "LICENSE_EXPIRED" || error.code === "LICENSE_FEATURE_DISABLED");
+
+  const active = plugins.filter((p) => p.status === "active");
+  const inactive = plugins.filter((p) => p.status !== "active");
+
+  if (isLicenseError) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="max-w-lg mx-auto mt-16 text-center">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-8">
+            <p className="text-4xl mb-3">&#9888;</p>
+            <h2 className="text-lg font-semibold text-amber-800">License Required</h2>
+            <p className="text-sm text-amber-700 mt-2">
+              {error.code === "LICENSE_FEATURE_DISABLED"
+                ? "Plugins are not available on your current license tier. Contact your vendor to upgrade."
+                : "Your license has expired or is not active. Contact your vendor to renew."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="max-w-lg mx-auto mt-16 text-center">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-8">
+            <h2 className="text-lg font-semibold text-red-800">Failed to load plugins</h2>
+            <p className="text-sm text-red-600 mt-2">
+              {error instanceof ApiError ? error.message : "An unexpected error occurred."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -121,7 +164,7 @@ export default function PluginsPage() {
             </section>
           )}
 
-          {(plugins?.length ?? 0) === 0 && (
+          {plugins.length === 0 && (
             <div className="text-center py-12 text-gray-500">
               <p className="text-4xl mb-3">---</p>
               <p className="font-medium">No plugins installed</p>

@@ -14,6 +14,7 @@
   "dependencies": {
     "zod": "^3.22.4",
     "node-fetch": "^3.3.2",
+    "extract-zip": "^2.0.1",
     "@hospital-cms/logger": "workspace:*",
     "@hospital-cms/errors": "workspace:*",
     "@hospital-cms/crypto": "workspace:*",

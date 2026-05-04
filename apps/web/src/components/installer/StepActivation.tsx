@@ -49,8 +49,8 @@ export function StepActivation({ data, onNext, onBack }: Props) {
         Vendor Activation
       </h2>
       <p className="text-sm text-gray-500 mb-6">
-        Enter the registration token issued by your vendor control panel. This
-        links your hospital instance to the vendor management platform.
+        Enter the registration token provided by your vendor. This links your
+        hospital instance to the management platform.
       </p>
 
       <div className="space-y-5">
@@ -66,8 +66,8 @@ export function StepActivation({ data, onNext, onBack }: Props) {
             onChange={(e) => setRegistrationToken(e.target.value)}
           />
           <p className="text-xs text-gray-400 mt-1">
-            Obtain this token from the vendor dashboard under &ldquo;New
-            Instance&rdquo;.
+            Your vendor generates this token from the control panel and shares
+            it with you during onboarding.
           </p>
         </div>
 

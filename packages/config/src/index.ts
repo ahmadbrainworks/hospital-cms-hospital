@@ -209,4 +209,11 @@ export type { ControlPanelConfig } from "./schemas/control-panel";
 export { getAgentConfig as getAgentConfigFromPackage, resetAgentConfig } from "./schemas/agent";
 export type { AgentConfig as AgentConfigFromPackage } from "./schemas/agent";
 
-export { DATA_DIR, DEFAULT_LOCK_FILE, VENDOR_CP_API_URL, EMBEDDED_VENDOR_PUBLIC_KEY } from "./paths";
+export {
+  DATA_DIR,
+  DEFAULT_LOCK_FILE,
+  DEFAULT_PRIVATE_KEY_PATH,
+  DEFAULT_PUBLIC_KEY_PATH,
+  VENDOR_CP_API_URL,
+  EMBEDDED_VENDOR_PUBLIC_KEY,
+} from "./paths";

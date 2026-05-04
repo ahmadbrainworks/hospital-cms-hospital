@@ -34,7 +34,7 @@ export function authRouter(db: Db): Router {
 
       // Get hospitalId from single-instance document
       const instance = await hospitalRepo.findSingle();
-      const hospitalId = instance?._id ?? "default";
+      const hospitalId = instance?.instanceId ?? "default";
 
       const result = await authService.login({
         hospitalId,
@@ -146,7 +146,7 @@ export function authRouter(db: Db): Router {
       }
 
       const instance = await hospitalRepo.findSingle();
-      const hospitalId = String(instance?._id ?? "default");
+      const hospitalId = instance?.instanceId ?? "default";
 
       const result = await authService.completeMfaLogin({
         hospitalId,

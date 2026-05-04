@@ -7,6 +7,8 @@ import { Permission, UserRole } from "@hospital-cms/shared-types";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
+import { PluginSlot } from "../plugin/PluginSlot";
+import { WidgetZone } from "../widget/WidgetZone";
 
 // DASHBOARD LAYOUT
 // Sidebar navigation with permission-aware link visibility.
@@ -82,6 +84,18 @@ const NAV_ITEMS: NavItem[] = [
     permission: Permission.SYSTEM_SETTINGS_READ,
   },
   {
+    href: "/doctors",
+    label: "Doctors",
+    icon: "👨‍⚕️",
+    permission: Permission.SYSTEM_SETTINGS_MANAGE,
+  },
+  {
+    href: "/wards",
+    label: "Wards",
+    icon: "🏢",
+    permission: Permission.SYSTEM_SETTINGS_MANAGE,
+  },
+  {
     href: "/settings",
     label: "Settings",
     icon: "⚙️",
@@ -120,6 +134,9 @@ export function DashboardLayout({ children }: Props) {
           </div>
         </div>
 
+        {/* Widget Zone: Sidebar Top */}
+        <WidgetZone zone="sidebar.top" className="border-b border-gray-200 p-3" />
+
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
           {visibleNav.map((item) => {
@@ -142,6 +159,15 @@ export function DashboardLayout({ children }: Props) {
             );
           })}
         </nav>
+
+        {/* Widget Zone: Sidebar Bottom */}
+        <WidgetZone zone="sidebar.bottom" className="border-b border-gray-200 p-3" />
+
+        {/* Sidebar addon slot for plugins */}
+        <PluginSlot
+          slotId="sidebar.addon"
+          className="border-t border-gray-200 p-3"
+        />
 
         {/* User info */}
         <div className="border-t border-gray-200 p-3">
@@ -167,7 +193,10 @@ export function DashboardLayout({ children }: Props) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto">
+        <PluginSlot slotId="dashboard.banner" className="border-b border-gray-200" />
+        {children}
+      </main>
     </div>
   );
 }

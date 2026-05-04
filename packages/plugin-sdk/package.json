@@ -1,0 +1,19 @@
+{
+  "name": "@hospital-cms/plugin-sdk",
+  "version": "1.0.0",
+  "description": "Hospital CMS Plugin SDK — helpers, types, and manifest builders",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hospital-cms/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.0"
+  }
+}

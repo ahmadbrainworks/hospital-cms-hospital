@@ -11,6 +11,8 @@ import { notFoundHandler } from "./middleware/not-found";
 import { authRouter } from "./routes/auth.routes";
 import { userRouter } from "./routes/user.routes";
 import { patientRouter } from "./routes/patient.routes";
+import { doctorRouter } from "./routes/doctor.routes";
+import { wardRouter } from "./routes/ward.routes";
 import { encounterRouter } from "./routes/encounter.routes";
 import { billingRouter } from "./routes/billing.routes";
 import { labRouter } from "./routes/lab.routes";
@@ -18,6 +20,7 @@ import { pharmacyRouter } from "./routes/pharmacy.routes";
 import { workflowRouter } from "./routes/workflow.routes";
 import { pluginRouter } from "./routes/plugin.routes";
 import { themeRouter } from "./routes/theme.routes";
+import { widgetRouter } from "./routes/widget.routes";
 import { auditRouter } from "./routes/audit.routes";
 import { healthRouter } from "./routes/health.routes";
 import { systemRouter } from "./routes/system.routes";
@@ -55,8 +58,10 @@ export function createApp(db: Db): Application {
     cors({
       origin: cfg.CORS_ORIGINS,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-Trace-ID"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Trace-ID", "X-Agent-Secret"],
+      exposedHeaders: ["X-Trace-ID"],
       credentials: true,
+      maxAge: 3600, // Cache preflight for 1 hour
     }),
   );
 
@@ -159,6 +164,8 @@ export function createApp(db: Db): Application {
   apiRouter.use(licenseGuard(db));
   apiRouter.use("/users", userRouter(db));
   apiRouter.use("/patients", patientRouter(db));
+  apiRouter.use("/doctors", doctorRouter(db));
+  apiRouter.use("/wards", wardRouter(db));
   apiRouter.use("/encounters", encounterRouter(db));
   apiRouter.use("/billing", billingRouter(db));
   apiRouter.use("/lab", labRouter(db));
@@ -171,6 +178,7 @@ export function createApp(db: Db): Application {
   );
   apiRouter.use("/plugins", requireFeature("plugin_runtime"), pluginRouter(db));
   apiRouter.use("/themes", requireFeature("theme_engine"), themeRouter(db));
+  apiRouter.use("/widgets", widgetRouter(db));
   apiRouter.use("/audit", auditRouter(db));
   apiRouter.use("/system", systemRouter(db));
   apiRouter.use("/events", sseRouter());

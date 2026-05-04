@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import type { InstallerFormData } from "../../app/install/page";
+import { useState, useEffect } from "react";
 
 interface Props {
-  data: Partial<InstallerFormData>;
-  onNext: (data: Pick<InstallerFormData, "mongoUri" | "redisUrl">) => void;
+  onNext: () => void;
 }
 
 interface TestResult {
@@ -13,13 +11,7 @@ interface TestResult {
   redis: { ok: boolean; error?: string };
 }
 
-export function StepConnectivity({ data, onNext }: Props) {
-  const [mongoUri, setMongoUri] = useState(
-    data.mongoUri ?? "mongodb://localhost:27017/hospital_cms",
-  );
-  const [redisUrl, setRedisUrl] = useState(
-    data.redisUrl ?? "redis://localhost:6379",
-  );
+export function StepConnectivity({ onNext }: Props) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [error, setError] = useState("");
@@ -33,7 +25,6 @@ export function StepConnectivity({ data, onNext }: Props) {
       const res = await fetch("/install/api/test-connectivity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mongoUri, redisUrl }),
       });
       const data = await res.json();
 
@@ -50,44 +41,28 @@ export function StepConnectivity({ data, onNext }: Props) {
     }
   };
 
+  // Auto-test on mount
+  useEffect(() => {
+    handleTest();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const allOk = testResult?.mongodb.ok && testResult?.redis.ok;
 
   return (
     <div>
       <h2 className="text-xl font-semibold text-gray-900 mb-1">
-        Database Connection
+        Service Connectivity
       </h2>
       <p className="text-sm text-gray-500 mb-6">
-        Enter your MongoDB and Redis connection strings. The installer will
-        verify connectivity and write access before proceeding.
+        Verifying that MongoDB and Redis are running and reachable on this
+        server. These services must be available before installation can proceed.
       </p>
 
-      <div className="space-y-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            MongoDB URI
-          </label>
-          <input
-            type="text"
-            value={mongoUri}
-            onChange={(e) => setMongoUri(e.target.value)}
-            placeholder="mongodb://localhost:27017/hospital_cms"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-          />
+      {testing && !testResult && (
+        <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-700">
+          Testing connections...
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Redis URL
-          </label>
-          <input
-            type="text"
-            value={redisUrl}
-            onChange={(e) => setRedisUrl(e.target.value)}
-            placeholder="redis://localhost:6379"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-          />
-        </div>
-      </div>
+      )}
 
       {testResult && (
         <div className="mb-6 p-4 rounded-lg bg-gray-50 border border-gray-200 space-y-2">
@@ -110,16 +85,22 @@ export function StepConnectivity({ data, onNext }: Props) {
         </div>
       )}
 
+      {testResult && !allOk && (
+        <p className="mb-4 text-sm text-gray-500">
+          Ensure MongoDB and Redis are installed and running, then retry.
+        </p>
+      )}
+
       <div className="flex gap-3">
         <button
           onClick={handleTest}
-          disabled={testing || !mongoUri || !redisUrl}
+          disabled={testing}
           className="flex-1 px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {testing ? "Testing..." : "Test Connection"}
+          {testing ? "Testing..." : "Retry"}
         </button>
         <button
-          onClick={() => onNext({ mongoUri, redisUrl })}
+          onClick={onNext}
           disabled={!allOk}
           className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -146,7 +127,7 @@ function ConnectivityRow({
           ok ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
         }`}
       >
-        {ok ? "✓" : "✗"}
+        {ok ? "\u2713" : "\u2717"}
       </span>
       <span className="text-sm font-medium text-gray-700">{label}</span>
       {!ok && error && (

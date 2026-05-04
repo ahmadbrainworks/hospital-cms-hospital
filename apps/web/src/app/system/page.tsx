@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { api } from "../../lib/api-client";
+import { api, ApiError } from "../../lib/api-client";
 import { useAuth } from "../../lib/auth-context";
 import { hasPermission } from "../../lib/permissions";
 import { Permission } from "@hospital-cms/shared-types";
@@ -110,12 +110,13 @@ export default function SystemPage() {
   const {
     data: metrics,
     isLoading: metricsLoading,
+    error: metricsError,
     mutate: refreshMetrics,
   } = useSWR<SystemMetrics>("/api/v1/system/metrics", fetcher, {
     refreshInterval: 30000,
   });
 
-  const { data: licenseDetail, mutate: refreshLicense } = useSWR<LicenseDetail>(
+  const { data: licenseDetail, error: licenseError, mutate: refreshLicense } = useSWR<LicenseDetail>(
     "/api/v1/system/license",
     fetcher,
   );
@@ -124,6 +125,32 @@ export default function SystemPage() {
     return (
       <div className="p-6 text-center text-gray-500">
         <p>You don't have permission to view system information.</p>
+      </div>
+    );
+  }
+
+  const isLicenseError =
+    (metricsError instanceof ApiError &&
+      (metricsError.code === "LICENSE_EXPIRED" || metricsError.code === "LICENSE_FEATURE_DISABLED")) ||
+    (licenseError instanceof ApiError &&
+      (licenseError.code === "LICENSE_EXPIRED" || licenseError.code === "LICENSE_FEATURE_DISABLED"));
+
+  if (isLicenseError) {
+    const err = (metricsError ?? licenseError) as ApiError;
+    return (
+      <div className="p-6 max-w-5xl mx-auto">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">System</h1>
+        <div className="max-w-lg mx-auto mt-8 text-center">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-8">
+            <p className="text-4xl mb-3">&#9888;</p>
+            <h2 className="text-lg font-semibold text-amber-800">License Required</h2>
+            <p className="text-sm text-amber-700 mt-2">
+              {err.code === "LICENSE_FEATURE_DISABLED"
+                ? "System metrics are not available on your current license tier. Contact your vendor to upgrade."
+                : "Your license has expired or is not active. Contact your vendor to renew."}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

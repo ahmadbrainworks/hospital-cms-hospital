@@ -1,10 +1,20 @@
 'use client';
 
+import { useState } from 'react';
+
 interface Props {
   instanceId: string;
 }
 
 export function StepSuccess({ instanceId }: Props) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(instanceId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="text-center">
       <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
@@ -54,12 +64,20 @@ export function StepSuccess({ instanceId }: Props) {
       </div>
 
       <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-6">
-        <p className="text-xs text-blue-700">
-          <strong>Instance ID:</strong>{' '}
-          <code className="font-mono">{instanceId}</code>
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-blue-700">
+            <strong>Instance ID:</strong>{' '}
+            <code className="font-mono">{instanceId}</code>
+          </p>
+          <button
+            onClick={handleCopy}
+            className="text-xs font-medium text-blue-700 hover:text-blue-900 px-2 py-1 rounded border border-blue-300 bg-white"
+          >
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
         <p className="text-xs text-blue-600 mt-1">
-          Save this for pairing with the vendor control panel.
+          Your instance has been registered with the vendor control panel.
         </p>
       </div>
 

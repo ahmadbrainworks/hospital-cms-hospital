@@ -104,11 +104,12 @@ export class SessionStore {
     );
   }
 
-  async revokeAllUserSessions(userId: string): Promise<void> {
-    await this.collection.updateMany(
+  async revokeAllUserSessions(userId: string): Promise<number> {
+    const result = await this.collection.updateMany(
       { userId, revokedAt: { $exists: false } },
       { $set: { revokedAt: new Date() } },
     );
+    return result.modifiedCount;
   }
 
   async countActiveSessions(userId: string): Promise<number> {

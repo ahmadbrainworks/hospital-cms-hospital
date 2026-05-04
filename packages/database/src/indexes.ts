@@ -105,6 +105,67 @@ const INDEX_DEFINITIONS: Record<string, IndexDescription[]> = {
     },
   ],
 
+  [COLLECTIONS.DOCTORS]: [
+    {
+      key: { hospitalId: 1, isActive: 1 },
+      name: "doctors_hospital_active",
+    },
+    {
+      key: { hospitalId: 1, lastName: 1, firstName: 1 },
+      name: "doctors_name",
+    },
+    {
+      key: { hospitalId: 1, email: 1 },
+      sparse: true,
+      name: "doctors_email",
+    },
+    {
+      key: { deletedAt: 1 },
+      sparse: true,
+      name: "doctors_deletedAt_sparse",
+    },
+    {
+      key: {
+        firstName: "text",
+        lastName: "text",
+        email: "text",
+        phone: "text",
+        specialization: "text",
+        licenseNumber: "text",
+      },
+      name: "doctors_text_search",
+    },
+  ],
+
+  [COLLECTIONS.WARDS]: [
+    {
+      key: { hospitalId: 1, name: 1 },
+      unique: true,
+      name: "wards_hospital_name_unique",
+    },
+    {
+      key: { hospitalId: 1, code: 1 },
+      sparse: true,
+      name: "wards_hospital_code",
+    },
+    {
+      key: { hospitalId: 1, isActive: 1 },
+      name: "wards_hospital_active",
+    },
+    {
+      key: { deletedAt: 1 },
+      sparse: true,
+      name: "wards_deletedAt_sparse",
+    },
+    {
+      key: {
+        name: "text",
+        wardType: "text",
+      },
+      name: "wards_text_search",
+    },
+  ],
+
   [COLLECTIONS.ENCOUNTERS]: [
     {
       key: { hospitalId: 1, encounterNumber: 1 },
@@ -250,7 +311,8 @@ const INDEX_DEFINITIONS: Record<string, IndexDescription[]> = {
 
   [COLLECTIONS.SESSIONS]: [
     { key: { userId: 1 }, name: "sessions_userId" },
-    { key: { token: 1 }, unique: true, name: "sessions_token_unique" },
+    { key: { sessionId: 1 }, unique: true, name: "sessions_sessionId_unique" },
+    { key: { refreshTokenHash: 1 }, name: "sessions_refreshTokenHash" },
     {
       key: { expiresAt: 1 },
       expireAfterSeconds: 0,
@@ -283,8 +345,27 @@ const INDEX_DEFINITIONS: Record<string, IndexDescription[]> = {
   ],
 };
 
+// Stale indexes to drop (renamed or removed from INDEX_DEFINITIONS)
+const STALE_INDEXES: Record<string, string[]> = {
+  [COLLECTIONS.SESSIONS]: ["sessions_token_unique"],
+};
+
 export async function ensureIndexes(db: Db): Promise<void> {
   const log = getLog();
+
+  // Drop stale indexes first
+  for (const [collectionName, indexNames] of Object.entries(STALE_INDEXES)) {
+    const collection = db.collection(collectionName);
+    for (const name of indexNames) {
+      try {
+        await collection.dropIndex(name);
+        log.info({ collection: collectionName, index: name }, "Dropped stale index");
+      } catch {
+        // Index doesn't exist — nothing to do
+      }
+    }
+  }
+
   const tasks: Promise<void>[] = [];
 
   for (const [collectionName, indexes] of Object.entries(INDEX_DEFINITIONS)) {

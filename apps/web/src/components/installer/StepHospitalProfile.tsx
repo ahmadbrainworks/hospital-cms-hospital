@@ -19,8 +19,8 @@ export function StepHospitalProfile({ data, onNext, onBack }: Props) {
   const [state, setState] = useState(data.address?.state ?? "");
   const [country, setCountry] = useState(data.address?.country ?? "");
   const [postalCode, setPostalCode] = useState(data.address?.postalCode ?? "");
-  const [timezone, setTimezone] = useState(data.settings?.timezone ?? "UTC");
-  const [currency, setCurrency] = useState(data.settings?.currency ?? "USD");
+  const [timezone, setTimezone] = useState(data.settings?.timezone ?? "Africa/Lagos");
+  const [currency, setCurrency] = useState(data.settings?.currency ?? "NGN");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = (): boolean => {
@@ -171,6 +171,7 @@ export function StepHospitalProfile({ data, onNext, onBack }: Props) {
               onChange={(e) => setTimezone(e.target.value)}
               className={inputClass(false)}
             >
+              <option value="Africa/Lagos">Africa/Lagos</option>
               <option value="UTC">UTC</option>
               <option value="America/New_York">America/New_York</option>
               <option value="America/Chicago">America/Chicago</option>
@@ -179,7 +180,6 @@ export function StepHospitalProfile({ data, onNext, onBack }: Props) {
               <option value="Asia/Dubai">Asia/Dubai</option>
               <option value="Asia/Karachi">Asia/Karachi</option>
               <option value="Asia/Kolkata">Asia/Kolkata</option>
-              <option value="Africa/Lagos">Africa/Lagos</option>
             </select>
           </FormField>
           <FormField label="Currency">
@@ -188,12 +188,12 @@ export function StepHospitalProfile({ data, onNext, onBack }: Props) {
               onChange={(e) => setCurrency(e.target.value)}
               className={inputClass(false)}
             >
+              <option value="NGN">NGN — Nigerian Naira</option>
               <option value="USD">USD — US Dollar</option>
               <option value="EUR">EUR — Euro</option>
               <option value="GBP">GBP — British Pound</option>
               <option value="PKR">PKR — Pakistani Rupee</option>
               <option value="INR">INR — Indian Rupee</option>
-              <option value="NGN">NGN — Nigerian Naira</option>
               <option value="KES">KES — Kenyan Shilling</option>
             </select>
           </FormField>

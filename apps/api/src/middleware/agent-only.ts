@@ -25,6 +25,11 @@ const AGENT_SECRET = process.env["AGENT_SECRET"] ?? "";
  */
 export function agentOnly(label?: string) {
   return (req: Request, _res: Response, next: NextFunction): void => {
+    // Allow CORS preflight requests to pass through
+    if (req.method === "OPTIONS") {
+      return next();
+    }
+
     const provided = req.headers["x-agent-secret"] as string | undefined;
 
     // In development, warn but allow through

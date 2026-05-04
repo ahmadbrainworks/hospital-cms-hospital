@@ -1,3 +1,5 @@
+const { tokenThemeExtension } = require('./src/design-system/tailwind-adapter');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -6,7 +8,7 @@ module.exports = {
     './src/lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: tokenThemeExtension,
   },
   plugins: [],
 };

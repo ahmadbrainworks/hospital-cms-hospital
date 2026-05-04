@@ -27,6 +27,9 @@ export default function PatientDetailPage() {
     id ? `/api/v1/encounters?patientId=${id}&limit=10` : null,
     fetcher,
   );
+  const encounters = Array.isArray(encountersData?.items)
+    ? encountersData.items
+    : [];
 
   const { data: invoicesData } = useSWR<{ items: Invoice[] }>(
     id && user && hasPermission(user, Permission.BILLING_READ)
@@ -144,11 +147,11 @@ export default function PatientDetailPage() {
 
           {/* Encounters */}
           <InfoCard title="Recent Encounters">
-            {!encountersData?.items.length ? (
+            {!encounters.length ? (
               <p className="text-sm text-gray-400">No encounters found.</p>
             ) : (
               <div className="space-y-2">
-                {encountersData.items.map((enc) => (
+                {encounters.map((enc) => (
                   <Link
                     key={enc._id}
                     href={`/encounters/${enc._id}`}

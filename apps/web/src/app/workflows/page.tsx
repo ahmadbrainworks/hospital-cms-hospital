@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { api } from "../../lib/api-client";
+import { api, ApiError } from "../../lib/api-client";
 import { useAuth } from "../../lib/auth-context";
 import { hasPermission } from "../../lib/permissions";
 import { Permission } from "@hospital-cms/shared-types";
@@ -105,10 +105,15 @@ function WorkflowRunCard({
 }
 
 export default function WorkflowsPage() {
-  const { data: definitions } = useSWR<WorkflowDefinition[]>(
+  const { data: definitions, error } = useSWR<WorkflowDefinition[]>(
     "/api/v1/workflows/definitions",
     fetcher,
   );
+
+  const isLicenseError =
+    error instanceof ApiError &&
+    (error.code === "LICENSE_EXPIRED" || error.code === "LICENSE_FEATURE_DISABLED");
+
   const [selectedEntity, setSelectedEntity] = useState({
     type: "encounter",
     id: "",
@@ -149,6 +154,39 @@ export default function WorkflowsPage() {
       setTransitioning(false);
     }
   };
+
+  if (isLicenseError) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="max-w-lg mx-auto mt-16 text-center">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-8">
+            <p className="text-4xl mb-3">&#9888;</p>
+            <h2 className="text-lg font-semibold text-amber-800">License Required</h2>
+            <p className="text-sm text-amber-700 mt-2">
+              {error.code === "LICENSE_FEATURE_DISABLED"
+                ? "Workflows are not available on your current license tier. Contact your vendor to upgrade."
+                : "Your license has expired or is not active. Contact your vendor to renew."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="max-w-lg mx-auto mt-16 text-center">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-8">
+            <h2 className="text-lg font-semibold text-red-800">Failed to load workflows</h2>
+            <p className="text-sm text-red-600 mt-2">
+              {error instanceof ApiError ? error.message : "An unexpected error occurred."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">

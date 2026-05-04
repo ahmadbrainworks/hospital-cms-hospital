@@ -11,6 +11,11 @@ export function authenticate(
   _res: Response,
   next: NextFunction,
 ): void {
+  // Skip authentication for CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return next();
+  }
+
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     return next(new UnauthorizedError("Bearer token required"));

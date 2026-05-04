@@ -1,26 +1,52 @@
 "use client";
 
 import {
-  AwaitedReactNode,
-  JSXElementConstructor,
-  Key,
-  ReactElement,
-  ReactNode,
-  ReactPortal,
   useState,
 } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { api } from "../../lib/api-client";
-import type { Patient, PaginatedResult } from "@hospital-cms/shared-types";
+import { api, ApiError } from "../../lib/api-client";
+import type {
+  ApiMeta,
+  Patient,
+  PaginatedResult,
+} from "@hospital-cms/shared-types";
 import { useAuth } from "../../lib/auth-context";
 import { hasPermission } from "../../lib/permissions";
 import { Permission } from "@hospital-cms/shared-types";
 
 // PATIENT LISTING PAGE
 
-const fetcher = (url: string): Promise<any> =>
-  api.get<PaginatedResult<Patient>>(url).then((r) => r.data);
+interface PatientListData {
+  items: Patient[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+const fetcher = async (url: string): Promise<PatientListData> => {
+  const res = await api.get<PaginatedResult<Patient> | Patient[]>(url);
+  const payload = res.data;
+  const meta = (res.meta ?? {}) as ApiMeta;
+
+  const paginatedPayload = Array.isArray(payload) ? null : payload;
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : [];
+
+  const page = paginatedPayload?.page ?? meta.page ?? 1;
+  const limit = paginatedPayload?.limit ?? meta.limit ?? 20;
+  const total = paginatedPayload?.total ?? meta.total ?? items.length;
+  const totalPages =
+    paginatedPayload?.totalPages ??
+    meta.totalPages ??
+    Math.max(1, Math.ceil(total / Math.max(1, limit)));
+
+  return { items, total, page, limit, totalPages };
+};
 
 export default function PatientsPage() {
   const { user } = useAuth();
@@ -36,7 +62,11 @@ export default function PatientsPage() {
     debouncedSearch ? `&q=${encodeURIComponent(debouncedSearch)}` : ""
   }`;
 
-  const { data, error, isLoading } = useSWR(url, fetcher);
+  const { data, error, isLoading } = useSWR<PatientListData>(url, fetcher);
+  const items = data?.items ?? [];
+  const total = data?.total ?? items.length;
+  const totalPages = data?.totalPages ?? 1;
+  const currentPage = data?.page ?? page;
 
   const handleSearchChange = (val: string) => {
     setSearch(val);
@@ -52,7 +82,7 @@ export default function PatientsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Patients</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {data ? `${data.total} total patients` : "Loading..."}
+            {data ? `${total} total patients` : "Loading..."}
           </p>
         </div>
         {canCreate && (
@@ -109,76 +139,28 @@ export default function PatientsPage() {
             )}
             {error && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-red-500">
-                  Failed to load patients.
+                <td colSpan={6} className="px-4 py-8 text-center">
+                  {error instanceof ApiError &&
+                  (error.code === "LICENSE_EXPIRED" || error.code === "LICENSE_FEATURE_DISABLED") ? (
+                    <div className="inline-flex flex-col items-center gap-2">
+                      <span className="text-3xl">&#9888;</span>
+                      <span className="font-semibold text-amber-800">License Required</span>
+                      <span className="text-sm text-amber-700">
+                        {error.code === "LICENSE_FEATURE_DISABLED"
+                          ? "This feature is not available on your current license tier. Contact your vendor to upgrade."
+                          : "Your license has expired or is not active. Contact your vendor to renew."}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-red-500">
+                      Failed to load patients.{" "}
+                      {error instanceof ApiError ? error.message : ""}
+                    </span>
+                  )}
                 </td>
               </tr>
             )}
-            {data?.items.map(
-              (patient: {
-                _id: Key | null | undefined;
-                patientNumber:
-                  | string
-                  | number
-                  | bigint
-                  | boolean
-                  | ReactElement<any, string | JSXElementConstructor<any>>
-                  | Iterable<ReactNode>
-                  | ReactPortal
-                  | Promise<AwaitedReactNode>
-                  | null
-                  | undefined;
-                profile: {
-                  lastName:
-                    | string
-                    | number
-                    | bigint
-                    | boolean
-                    | ReactElement<any, string | JSXElementConstructor<any>>
-                    | Iterable<ReactNode>
-                    | ReactPortal
-                    | Promise<AwaitedReactNode>
-                    | null
-                    | undefined;
-                  firstName:
-                    | string
-                    | number
-                    | bigint
-                    | boolean
-                    | ReactElement<any, string | JSXElementConstructor<any>>
-                    | Iterable<ReactNode>
-                    | ReactPortal
-                    | Promise<AwaitedReactNode>
-                    | null
-                    | undefined;
-                  dateOfBirth: string | number | Date;
-                };
-                mrn:
-                  | string
-                  | number
-                  | bigint
-                  | boolean
-                  | ReactElement<any, string | JSXElementConstructor<any>>
-                  | Iterable<ReactNode>
-                  | ReactPortal
-                  | Promise<AwaitedReactNode>
-                  | null
-                  | undefined;
-                contactInfo: {
-                  phone:
-                    | string
-                    | number
-                    | bigint
-                    | boolean
-                    | ReactElement<any, string | JSXElementConstructor<any>>
-                    | Iterable<ReactNode>
-                    | ReactPortal
-                    | Promise<AwaitedReactNode>
-                    | null
-                    | undefined;
-                };
-                status: string;
-              }) => (
+            {items.map((patient: Patient) => (
                 <tr key={patient._id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">
                     {patient.patientNumber}
@@ -187,7 +169,6 @@ export default function PatientsPage() {
                     <div className="font-medium text-gray-900">
                       {patient.profile.lastName}, {patient.profile.firstName}
                     </div>
-                    <div className="text-xs text-gray-400">{patient.mrn}</div>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {new Date(patient.profile.dateOfBirth).toLocaleDateString()}
@@ -209,7 +190,7 @@ export default function PatientsPage() {
                 </tr>
               ),
             )}
-            {data?.items.length === 0 && (
+            {items.length === 0 && !isLoading && !error && (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                   {search
@@ -222,22 +203,22 @@ export default function PatientsPage() {
         </table>
 
         {/* Pagination */}
-        {data && data.totalPages > 1 && (
+        {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <p className="text-xs text-gray-500">
-              Page {data.page} of {data.totalPages} ({data.total} results)
+              Page {currentPage} of {totalPages} ({total} results)
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
+                disabled={currentPage === 1}
                 className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-white disabled:opacity-40"
               >
                 Previous
               </button>
               <button
-                onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
-                disabled={page === data.totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
                 className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-white disabled:opacity-40"
               >
                 Next

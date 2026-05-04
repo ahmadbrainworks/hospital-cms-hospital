@@ -181,6 +181,38 @@ export interface PatientMedicalInfo {
   notes?: string;
 }
 
+// Doctor
+export interface Doctor extends BaseDocument, SoftDeletable {
+  hospitalId: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  gender: Gender;
+  phone?: string;
+  email?: string;
+  department?: string;
+  specialization?: string;
+  licenseNumber?: string;
+  qualifications: string[];
+  photoUrl?: string;
+  notes?: string;
+  isActive: boolean;
+}
+
+// Ward
+export type WardGender = "MALE" | "FEMALE" | "MIXED";
+
+export interface Ward extends BaseDocument, SoftDeletable {
+  hospitalId: string;
+  name: string;
+  code?: string;
+  description?: string;
+  gender: WardGender;
+  bedStart: number;
+  bedEnd: number;
+  isActive: boolean;
+}
+
 //  Encounter
 export interface Encounter extends BaseDocument {
   hospitalId: string;

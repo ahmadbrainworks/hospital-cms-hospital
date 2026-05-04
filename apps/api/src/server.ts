@@ -74,7 +74,7 @@ async function bootstrapFull(): Promise<void> {
   const { getConfig, resetConfig, loadInstallerOutput } = await import("@hospital-cms/config");
   const { logger } = await import("@hospital-cms/logger");
   const { connectDatabase, ensureIndexes } = await import("@hospital-cms/database");
-  const { createApp } = await import("./app");
+  const { createApp } = await import("./app.js");
 
   const log = logger("api:server");
 
@@ -116,7 +116,23 @@ async function bootstrapFull(): Promise<void> {
   // 2. Ensure all indexes exist (idempotent)
   await ensureIndexes(db);
 
-  // 3. Create and configure Express app
+  // 3. Initialize hospital_instance record if it doesn't exist
+  const instanceCol = db.collection("hospital_instance");
+  const existingInstance = await instanceCol.findOne({});
+  if (!existingInstance) {
+    const instanceId = cfg.INSTANCE_ID;
+    if (!instanceId) {
+      throw new Error("INSTANCE_ID not configured — cannot initialize hospital_instance");
+    }
+    await instanceCol.insertOne({
+      instanceId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    log.info({ instanceId }, "Initialized hospital_instance record");
+  }
+
+  // 4. Create and configure Express app
   const app = createApp(db);
 
   // 4. Start HTTP server

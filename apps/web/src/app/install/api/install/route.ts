@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAppError } from "@hospital-cms/errors";
+import {
+  DEFAULT_LOCK_FILE,
+  DEFAULT_PRIVATE_KEY_PATH,
+  DEFAULT_PUBLIC_KEY_PATH,
+  VENDOR_CP_API_URL,
+} from "@hospital-cms/config";
 import { InstallerService } from "../../../../installer-backend/installer.service";
 
-/** Fixed vendor CP API — not user-configurable */
-const VENDOR_CP_API_URL = "https://cp-api.hospitalcms.com";
+const MONGO_URI =
+  process.env["MONGODB_URI"] ?? "mongodb://localhost:27017/hospital_cms";
+const REDIS_URL = process.env["REDIS_URL"] ?? "redis://localhost:6379";
 
 const schema = z.object({
-  mongoUri: z.string().min(1),
-  redisUrl: z.string().min(1),
   registrationToken: z.string().min(8),
   hospitalName: z.string().min(1),
   hospitalSlug: z
@@ -50,14 +55,12 @@ const schema = z.object({
     }),
 });
 
-const DATA_DIR_ROOT = process.env["HOSPITAL_DATA_DIR"]
-  ?? `${process.cwd()}/.data`;
 const LOCK_FILE =
-  process.env["INSTALLER_LOCK_FILE"] ?? `${DATA_DIR_ROOT}/installer.lock`;
+  process.env["INSTALLER_LOCK_FILE"] ?? DEFAULT_LOCK_FILE;
 const PRIVATE_KEY_PATH =
-  process.env["INSTANCE_PRIVATE_KEY_PATH"] ?? `${DATA_DIR_ROOT}/instance.key`;
+  process.env["INSTANCE_PRIVATE_KEY_PATH"] ?? DEFAULT_PRIVATE_KEY_PATH;
 const PUBLIC_KEY_PATH =
-  process.env["INSTANCE_PUBLIC_KEY_PATH"] ?? `${DATA_DIR_ROOT}/instance.pub`;
+  process.env["INSTANCE_PUBLIC_KEY_PATH"] ?? DEFAULT_PUBLIC_KEY_PATH;
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,8 +68,8 @@ export async function POST(req: NextRequest) {
     const service = new InstallerService();
 
     const result = await service.runInstallation({
-      mongoUri: body.mongoUri,
-      redisUrl: body.redisUrl,
+      mongoUri: MONGO_URI,
+      redisUrl: REDIS_URL,
       controlPanelUrl: VENDOR_CP_API_URL,
       registrationToken: body.registrationToken,
       hospitalName: body.hospitalName,

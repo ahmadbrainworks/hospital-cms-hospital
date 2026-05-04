@@ -14,6 +14,11 @@ export function installGuard(hospitalRepo: HospitalRepository) {
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
+    // Always allow CORS preflight requests to pass through
+    if (req.method === "OPTIONS") {
+      return next();
+    }
+
     // Cache the state — don't hit DB on every request
     if (installationState === null) {
       installationState = await hospitalRepo.isInstalled();

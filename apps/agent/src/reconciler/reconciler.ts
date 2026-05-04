@@ -236,11 +236,10 @@ export class Reconciler {
     if (entry.packageType === "plugin") {
       // Deactivate old before installing new
       try {
-        await this.callApi(
-          "POST",
-          `/api/v1/plugins/${entry.packageId}/deactivate`,
-          {},
-        );
+        await this.callApi("POST", "/api/agent/deactivate-plugin", {
+          hospitalId: this.hospitalId,
+          pluginId: entry.packageId,
+        });
       } catch {
         // May fail if not yet active — proceed
       }
@@ -275,9 +274,14 @@ export class Reconciler {
     logger.info({ packageId, packageType }, "Removing package");
     try {
       if (packageType === "plugin") {
-        await this.callApi("DELETE", `/api/v1/plugins/${packageId}`, {});
+        await this.callApi("POST", "/api/agent/deactivate-plugin", {
+          hospitalId: this.hospitalId,
+          pluginId: packageId,
+        });
       } else if (packageType === "theme") {
-        await this.callApi("DELETE", "/api/v1/themes/active", {});
+        await this.callApi("POST", "/api/agent/remove-theme", {
+          hospitalId: this.hospitalId,
+        });
       }
       state.installedPackages = state.installedPackages.filter(
         (p) => p.packageId !== packageId,
@@ -300,7 +304,7 @@ export class Reconciler {
     if (configKeys.length === 0) return local;
 
     try {
-      await this.callApi("POST", "/api/v1/system/config", {
+      await this.callApi("POST", "/api/agent/apply-config", {
         config: desired.config,
       });
       summary.configKeysApplied.push(...configKeys);

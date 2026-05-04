@@ -101,10 +101,15 @@ async function getCachedLicense(db: Db): Promise<ActiveLicenseContext | null> {
  */
 export function licenseGuard(db: Db) {
   return async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
+    // Skip license check for CORS preflight requests
+    if (req.method === "OPTIONS") {
+      return next();
+    }
+
     try {
       const license = await getCachedLicense(db);
 

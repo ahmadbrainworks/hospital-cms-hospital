@@ -100,9 +100,12 @@ export class CommandExecutor {
 
     // CLEAR_CACHE — triggers a cache clear via local API (uses agent config, not payload)
     this.register("CLEAR_CACHE", async (_payload) => {
-      const response = await fetch(`${this.apiBaseUrl}/api/v1/system/cache/clear`, {
+      const response = await fetch(`${this.apiBaseUrl}/api/agent/clear-cache`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${this.apiAdminToken}` },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Agent-Secret": this.apiAdminToken,
+        },
         signal: AbortSignal.timeout(10000),
       });
       return {

@@ -10,6 +10,7 @@ coverage/
 *.key
 *.pem
 *.tsbuildinfo
+pnpm-lock.yaml
 
 # Installer-generated data (keys, lock file, packages, state)
 .data/

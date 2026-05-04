@@ -10,6 +10,7 @@ import { LicenseLeaseRepository } from "@hospital-cms/database";
 import type { LicenseLeaseDocument } from "@hospital-cms/contracts";
 import type { Db } from "mongodb";
 import type { AgentConfig } from "../config";
+import { Buffer } from "node:buffer";
 
 const logger = createLogger({ module: "LicenseRefresher" });
 
@@ -48,19 +49,35 @@ export class LicenseRefresher {
       return;
     }
 
-    // Verify the vendor's RSA signature before trusting the payload.
-    const { signature, ...rest } = payload;
-    const canonical = JSON.stringify(rest, Object.keys(rest).sort());
+    // The signature field contains a base64-encoded license token: { payload, signature }
+    // Decode it first, then verify the RSA signature
+    let decodedToken: { payload: string; signature: string };
+    try {
+      const tokenJson = Buffer.from(payload.signature, "base64").toString("utf8");
+      decodedToken = JSON.parse(tokenJson) as { payload: string; signature: string };
+    } catch (err) {
+      logger.error(
+        { instanceId: this.instanceId, error: String(err) },
+        "Failed to decode license token",
+      );
+      return;
+    }
+
+    // Verify the vendor's RSA signature over the payload
     const valid = verifyWithPublicKey(
-      canonical,
-      signature,
+      decodedToken.payload,
+      decodedToken.signature,
       this.vendorPublicKey,
     );
 
     if (!valid) {
       logger.error(
-        { instanceId: this.instanceId },
-        "License signature verification FAILED — skipping lease update",
+        {
+          instanceId: this.instanceId,
+          tier: payload.tier,
+          expiresAt: payload.expiresAt,
+        },
+        "License signature verification FAILED",
       );
       return;
     }
@@ -78,7 +95,7 @@ export class LicenseRefresher {
       maxBeds: payload.maxBeds,
       issuedAt: payload.issuedAt,
       expiresAt: payload.expiresAt,
-      vendorSignature: signature,
+      vendorSignature: decodedToken.signature,
       status: "active",
       refreshedAt: new Date().toISOString(),
     };

@@ -6,8 +6,25 @@
  * Override with HOSPITAL_DATA_DIR env var for custom deployments.
  */
 import { resolve } from "node:path";
+import { existsSync } from "node:fs";
 
-const MONOREPO_ROOT = resolve(__dirname, "../../..");
+/**
+ * Walk up from process.cwd() to find the monorepo root (where turbo.json lives).
+ * This works regardless of whether we're in a Next.js bundle, compiled tsc output,
+ * or running directly — unlike __dirname which Next.js transforms.
+ */
+function findMonorepoRoot(): string {
+  let dir = process.cwd();
+  for (let i = 0; i < 10; i++) {
+    if (existsSync(resolve(dir, "turbo.json"))) return dir;
+    const parent = resolve(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd();
+}
+
+const MONOREPO_ROOT = findMonorepoRoot();
 
 export const DATA_DIR =
   process.env["HOSPITAL_DATA_DIR"] ?? resolve(MONOREPO_ROOT, ".data");

@@ -5,6 +5,7 @@ import {
 } from '@hospital-cms/database';
 import { AuditService } from '@hospital-cms/audit';
 import { ConflictError } from '@hospital-cms/errors';
+import { globalEventBus } from '@hospital-cms/plugin-runtime';
 import {
   AuditAction,
   UserRole,
@@ -99,6 +100,14 @@ export class PatientService {
         name: `${profile.firstName} ${profile.lastName}`,
       },
       outcome: 'SUCCESS',
+    });
+
+    // Emit event for plugins to subscribe to
+    void globalEventBus.emit('patient.created', {
+      hospitalId,
+      patientId: patient._id,
+      mrn: patient.mrn,
+      name: `${profile.firstName} ${profile.lastName}`,
     });
 
     return patient;

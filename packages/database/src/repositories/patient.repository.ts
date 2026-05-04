@@ -1,4 +1,4 @@
-import { Db } from "mongodb";
+import { Db, ObjectId } from "mongodb";
 import type { Patient } from "@hospital-cms/shared-types";
 import { BaseRepository, WithStringId } from "../base-repository";
 import { COLLECTIONS } from "../collections";
@@ -35,16 +35,36 @@ export class PatientRepository extends BaseRepository<Patient> {
     query: string,
     opts?: { page?: number; limit?: number },
   ) {
-    if (!query.trim()) {
+    const q = query.trim();
+    if (!q) {
       return this.findMany({ hospitalId, deletedAt: { $exists: false } }, opts);
     }
 
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "i");
+
+    const filter: Parameters<typeof this.findMany>[0] = {
+      hospitalId,
+      deletedAt: { $exists: false },
+      $or: [
+        { patientNumber: { $regex: regex } },
+        { mrn: { $regex: regex } },
+        { "profile.firstName": { $regex: regex } },
+        { "profile.lastName": { $regex: regex } },
+        { "profile.nationalId": { $regex: regex } },
+        { "contactInfo.phone": { $regex: regex } },
+      ],
+    } as Parameters<typeof this.findMany>[0];
+
+    if (ObjectId.isValid(q)) {
+      (filter as Record<string, unknown>)["$or"] = [
+        ...((filter as Record<string, unknown>)["$or"] as unknown[]),
+        { _id: new ObjectId(q) },
+      ];
+    }
+
     return this.findMany(
-      {
-        hospitalId,
-        deletedAt: { $exists: false },
-        $text: { $search: query },
-      },
+      filter,
       opts,
     );
   }

@@ -65,11 +65,6 @@ export function StepFinalize({ data, onSuccess, onBack }: Props) {
       </p>
 
       <div className="space-y-4 mb-6">
-        <Section title="Database">
-          <Row label="MongoDB" value={maskUri(data.mongoUri)} />
-          <Row label="Redis" value={maskUri(data.redisUrl)} />
-        </Section>
-
         <Section title="Hospital">
           <Row label="Name" value={data.hospitalName} />
           <Row label="Slug" value={data.hospitalSlug} />
@@ -152,12 +147,3 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function maskUri(uri: string): string {
-  try {
-    const url = new URL(uri);
-    if (url.password) url.password = "***";
-    return url.toString();
-  } catch {
-    return uri;
-  }
-}

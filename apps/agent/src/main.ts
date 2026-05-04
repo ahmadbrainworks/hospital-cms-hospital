@@ -14,6 +14,45 @@ import type { LocalState } from "./services/types";
 
 const logger = createLogger({ module: "Agent" });
 
+function extractHospitalIdFromToken(token: string, instanceId: string): string {
+  if (!token) {
+    // Fallback: use instanceId as hospitalId if no token provided
+    if (!instanceId) {
+      throw new Error("Unable to determine hospitalId — both token and instanceId are missing");
+    }
+    logger.debug("No API_ADMIN_TOKEN provided; using instanceId as hospitalId");
+    return instanceId;
+  }
+
+  try {
+    // JWT format: header.payload.signature
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      // Not a JWT, treat as hex string and fallback to instanceId
+      logger.debug("API_ADMIN_TOKEN is not a JWT; using instanceId as hospitalId");
+      return instanceId;
+    }
+
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64").toString("utf-8"),
+    );
+    const hospitalId = payload.hospitalId as string;
+
+    if (!hospitalId) {
+      logger.debug("Token does not include hospitalId claim; using instanceId as fallback");
+      return instanceId;
+    }
+
+    return hospitalId;
+  } catch (err) {
+    logger.debug(
+      { err },
+      "Failed to parse API_ADMIN_TOKEN as JWT; falling back to instanceId",
+    );
+    return instanceId;
+  }
+}
+
 async function connectLocalDatabase(): Promise<{
   client: MongoClient;
   db: Db;
@@ -86,10 +125,12 @@ async function main() {
   );
   commandExecutor.register("ROTATE_INSTANCE_KEY", async () => keyRotator.rotate());
 
+  const hospitalId = extractHospitalIdFromToken(config.API_ADMIN_TOKEN ?? "", config.INSTANCE_ID);
   const reconciler = new Reconciler(
     packageInstaller,
     config.API_BASE_URL,
     config.API_ADMIN_TOKEN,
+    hospitalId,
   );
 
   let localState: LocalState = stateStore.load();
@@ -132,9 +173,12 @@ async function main() {
       if (heartbeatResponse.license === null) {
         logger.warn("Control-panel returned license:null — clearing local license cache");
         try {
-          await fetch(`${config.API_BASE_URL}/api/v1/system/cache/clear`, {
+          await fetch(`${config.API_BASE_URL}/api/agent/clear-cache`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${config.API_ADMIN_TOKEN ?? ""}` },
+            headers: {
+              "Content-Type": "application/json",
+              "X-Agent-Secret": config.API_ADMIN_TOKEN ?? "",
+            },
             signal: AbortSignal.timeout(10000),
           });
         } catch (err) {

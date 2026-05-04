@@ -19,6 +19,11 @@ function getPermissionContext(req: Request) {
 
 export function requirePermission(permission: Permission) {
   return (req: Request, _res: Response, next: NextFunction): void => {
+    // Skip authorization for CORS preflight requests
+    if (req.method === "OPTIONS") {
+      return next();
+    }
+
     try {
       assertPermission(getPermissionContext(req), permission);
       next();
@@ -30,6 +35,11 @@ export function requirePermission(permission: Permission) {
 
 export function requireRole(...roles: UserRole[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
+    // Skip authorization for CORS preflight requests
+    if (req.method === "OPTIONS") {
+      return next();
+    }
+
     try {
       assertRole(getPermissionContext(req), roles);
       next();
@@ -44,6 +54,11 @@ export function requireHospitalContext(
   _res: Response,
   next: NextFunction,
 ): void {
+  // Skip hospital context check for CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return next();
+  }
+
   if (!req.context.hospitalId) {
     return next(new UnauthorizedError("Hospital context required"));
   }

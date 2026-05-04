@@ -21,8 +21,6 @@ export type InstallerStep =
   | "success";
 
 export interface InstallerFormData {
-  mongoUri: string;
-  redisUrl: string;
   // Vendor activation
   registrationToken: string;
   // Hospital profile
@@ -65,7 +63,7 @@ const STEPS: InstallerStep[] = [
 ];
 
 const STEP_LABELS: Record<InstallerStep, string> = {
-  connectivity: "Database",
+  connectivity: "Services",
   activation: "Activation",
   hospital: "Hospital Profile",
   admin: "Administrator",
@@ -76,11 +74,9 @@ const STEP_LABELS: Record<InstallerStep, string> = {
 export default function InstallerPage() {
   const [step, setStep] = useState<InstallerStep>("connectivity");
   const [formData, setFormData] = useState<Partial<InstallerFormData>>({
-    mongoUri: "mongodb://localhost:27017/hospital_cms",
-    redisUrl: "redis://localhost:6379",
     settings: {
-      timezone: "UTC",
-      currency: "USD",
+      timezone: "Africa/Lagos",
+      currency: "NGN",
       dateFormat: "MM/DD/YYYY",
       defaultLanguage: "en",
     },
@@ -152,9 +148,7 @@ export default function InstallerPage() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {step === "connectivity" && (
             <StepConnectivity
-              data={formData}
-              onNext={(data) => {
-                updateData(data);
+              onNext={() => {
                 goNext();
               }}
             />
